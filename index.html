@@ -396,6 +396,7 @@
     .guest-view .video-form,
     .guest-view .video-hint,
     .guest-view .video-status,
+    .guest-view .photo-paste,
     .guest-view .photo-form,
     .guest-view .photo-hint,
     .guest-view .photo-status,
@@ -672,6 +673,94 @@
     .photo-form input:focus {
       border-color: #43b96f;
       box-shadow: 0 0 0 3px #43b96f26;
+    }
+
+    .photo-paste {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 14px;
+      padding: 18px;
+      border: 1px solid #58d98226;
+      border-radius: 8px;
+      background: #191d19;
+    }
+
+    .photo-paste label {
+      color: #e6dfd5;
+      font-size: 14px;
+    }
+
+    .photo-paste textarea {
+      width: 100%;
+      min-height: 76px;
+      resize: vertical;
+      padding: 12px 14px;
+      border: 1px solid #ffffff24;
+      border-radius: 5px;
+      outline: none;
+      background: #111114;
+      color: #f5f2ed;
+      font: inherit;
+    }
+
+    .photo-paste textarea:focus {
+      border-color: #43b96f;
+      box-shadow: 0 0 0 3px #43b96f26;
+    }
+
+    .photo-paste-preview {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .photo-paste-preview[hidden] {
+      display: none;
+    }
+
+    .photo-paste-preview img {
+      display: block;
+      width: min(100%, 220px);
+      max-height: 180px;
+      border-radius: 5px;
+      object-fit: contain;
+      background: #09090a;
+    }
+
+    .photo-paste-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .photo-paste-actions button {
+      padding: 10px 14px;
+      border: 1px solid #43b96f;
+      border-radius: 5px;
+      background: #43b96f;
+      color: #101712;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .photo-paste-actions button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .photo-paste-actions .photo-paste-cancel {
+      border-color: #ffffff3b;
+      background: transparent;
+      color: #e6dfd5;
+      font-weight: 400;
+    }
+
+    .photo-paste-hint {
+      margin: 0;
+      color: #aaa5a0;
+      font-size: 13px;
+      line-height: 1.5;
     }
 
     .photo-form button {
@@ -1055,6 +1144,19 @@
 
     <section class="photos-section" aria-labelledby="photos-title">
       <h2 id="photos-title">Фотографии объединения</h2>
+      <div class="photo-paste">
+        <label for="photo-paste-input">Скопируйте картинку, например в Telegram, затем вставьте её сюда сочетанием Ctrl+V</label>
+        <textarea id="photo-paste-input" rows="2" placeholder="Щёлкните здесь и нажмите Ctrl+V" aria-describedby="photo-paste-hint photo-paste-status"></textarea>
+        <div class="photo-paste-preview" id="photo-paste-preview" hidden>
+          <img id="photo-paste-image" alt="Предпросмотр вставленной фотографии">
+        </div>
+        <div class="photo-paste-actions">
+          <button id="photo-paste-add" type="button" disabled>Добавить вставленное фото</button>
+          <button class="photo-paste-cancel" id="photo-paste-cancel" type="button" hidden>Отменить</button>
+        </div>
+        <p class="photo-paste-hint" id="photo-paste-hint">Поддерживаются изображения PNG, JPG, GIF, WEBP и AVIF размером до 20 МБ. Фото из буфера сохраняется в этом браузере на этом устройстве.</p>
+        <p class="photo-paste-hint" id="photo-paste-status" role="status" aria-live="polite"></p>
+      </div>
       <form class="photo-form" id="photo-form">
         <label for="photo-url">Прямая ссылка на фотографию с Postimages</label>
         <input
@@ -1483,8 +1585,27 @@
     const photoUrlInput = document.querySelector("#photo-url");
     const photoStatus = document.querySelector("#photo-status");
     const photoList = document.querySelector("#photo-list");
+    const photoPasteInput = document.querySelector("#photo-paste-input");
+    const photoPastePreview = document.querySelector("#photo-paste-preview");
+    const photoPasteImage = document.querySelector("#photo-paste-image");
+    const photoPasteAddButton = document.querySelector("#photo-paste-add");
+    const photoPasteCancelButton = document.querySelector("#photo-paste-cancel");
+    const photoPasteStatus = document.querySelector("#photo-paste-status");
     const addedPhotoUrls = new Set();
     const photoStorageKey = "hollywood-gang-postimages-photos";
+    const pastedPhotoDatabaseName = "hollywood-gang-pasted-photos";
+    const pastedPhotoStoreName = "photos";
+    const pastedPhotoObjectUrls = new Map();
+    const maxPastedPhotoBytes = 20 * 1024 * 1024;
+    const supportedPastedPhotoTypes = new Set([
+      "image/png",
+      "image/jpeg",
+      "image/gif",
+      "image/webp",
+      "image/avif"
+    ]);
+    let pendingPastedPhoto = null;
+    let pastedPhotoDatabasePromise = null;
     const photoViewer = document.querySelector("#photo-viewer");
     const photoViewerImage = document.querySelector("#photo-viewer-image");
     const photoViewerScale = document.querySelector("#photo-viewer-scale");
@@ -1556,6 +1677,86 @@
         photoStatus.textContent = "Не удалось загрузить сохраненные фотографии. Проверьте настройки хранилища браузера.";
         return [];
       }
+    }
+
+    function openPastedPhotoDatabase() {
+      if (!("indexedDB" in window)) {
+        return Promise.reject(new Error("Браузер не поддерживает локальное хранилище изображений."));
+      }
+
+      if (pastedPhotoDatabasePromise) return pastedPhotoDatabasePromise;
+
+      pastedPhotoDatabasePromise = new Promise((resolve, reject) => {
+        const request = indexedDB.open(pastedPhotoDatabaseName, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(pastedPhotoStoreName)) {
+            request.result.createObjectStore(pastedPhotoStoreName, { keyPath: "id" });
+          }
+        };
+        request.onsuccess = () => {
+          request.result.onversionchange = () => {
+            request.result.close();
+            pastedPhotoDatabasePromise = null;
+          };
+          resolve(request.result);
+        };
+        request.onerror = () => reject(request.error || new Error("Не удалось открыть хранилище фотографий."));
+        request.onblocked = () => reject(new Error("Хранилище фотографий заблокировано другой вкладкой."));
+      }).catch((error) => {
+        pastedPhotoDatabasePromise = null;
+        throw error;
+      });
+
+      return pastedPhotoDatabasePromise;
+    }
+
+    async function savePastedPhoto(blob) {
+      const database = await openPastedPhotoDatabase();
+      const record = {
+        id: crypto.randomUUID(),
+        blob,
+        type: blob.type,
+        createdAt: Date.now()
+      };
+
+      await new Promise((resolve, reject) => {
+        const transaction = database.transaction(pastedPhotoStoreName, "readwrite");
+        transaction.objectStore(pastedPhotoStoreName).add(record);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error("Не удалось сохранить фотографию."));
+        transaction.onabort = () => reject(transaction.error || new Error("Сохранение фотографии отменено."));
+      });
+
+      return record;
+    }
+
+    async function loadPastedPhotos() {
+      const database = await openPastedPhotoDatabase();
+      const records = await new Promise((resolve, reject) => {
+        const transaction = database.transaction(pastedPhotoStoreName, "readonly");
+        const request = transaction.objectStore(pastedPhotoStoreName).getAll();
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error("Не удалось загрузить фотографии."));
+        transaction.onabort = () => reject(transaction.error || new Error("Загрузка фотографий отменена."));
+      });
+
+      return records.filter((record) =>
+        record &&
+        typeof record.id === "string" &&
+        record.blob instanceof Blob &&
+        supportedPastedPhotoTypes.has(record.blob.type)
+      );
+    }
+
+    async function deletePastedPhoto(id) {
+      const database = await openPastedPhotoDatabase();
+      await new Promise((resolve, reject) => {
+        const transaction = database.transaction(pastedPhotoStoreName, "readwrite");
+        transaction.objectStore(pastedPhotoStoreName).delete(id);
+        transaction.oncomplete = resolve;
+        transaction.onerror = () => reject(transaction.error || new Error("Не удалось удалить фотографию."));
+        transaction.onabort = () => reject(transaction.error || new Error("Удаление фотографии отменено."));
+      });
     }
 
     function getPostimagesUrl(value) {
@@ -1664,7 +1865,7 @@
       return card;
     }
 
-    function createPhotoCard(photoUrl) {
+    function createPhotoCard(photoUrl, captionText = "Фото с Postimages", pastedPhotoId = null) {
       const card = document.createElement("article");
       card.className = "photo-card";
 
@@ -1693,7 +1894,7 @@
       footer.className = "video-card-footer";
 
       const caption = document.createElement("p");
-      caption.textContent = "Фото с Postimages";
+      caption.textContent = captionText;
 
       const downloadButton = document.createElement("button");
       downloadButton.className = "photo-download";
@@ -1706,8 +1907,23 @@
       deleteButton.className = "video-delete";
       deleteButton.type = "button";
       deleteButton.textContent = "Удалить";
-      deleteButton.setAttribute("aria-label", "Удалить фотографию Postimages");
-      deleteButton.addEventListener("click", () => {
+      deleteButton.setAttribute("aria-label", "Удалить фотографию");
+      deleteButton.addEventListener("click", async () => {
+        if (pastedPhotoId) {
+          try {
+            await deletePastedPhoto(pastedPhotoId);
+            card.remove();
+            const objectUrl = pastedPhotoObjectUrls.get(pastedPhotoId);
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            pastedPhotoObjectUrls.delete(pastedPhotoId);
+            photoPasteStatus.textContent = "Вставленная фотография удалена.";
+          } catch (error) {
+            console.error("Не удалось удалить вставленную фотографию.", error);
+            photoPasteStatus.textContent = "Не удалось удалить фотографию. Проверьте доступность хранилища браузера.";
+          }
+          return;
+        }
+
         const remainingPhotoUrls = [...addedPhotoUrls].filter((savedUrl) => savedUrl !== photoUrl);
         if (!savePhotoUrls(remainingPhotoUrls)) return;
 
@@ -1720,6 +1936,83 @@
       card.append(previewButton, footer);
       return card;
     }
+
+    function displayPastedPhoto(record) {
+      const objectUrl = URL.createObjectURL(record.blob);
+      pastedPhotoObjectUrls.set(record.id, objectUrl);
+      photoList.prepend(createPhotoCard(objectUrl, "Фото из буфера обмена", record.id));
+    }
+
+    function setPendingPastedPhoto(file) {
+      if (!supportedPastedPhotoTypes.has(file.type)) {
+        photoPasteStatus.textContent = "Этот формат не поддерживается. Используйте PNG, JPG, GIF, WEBP или AVIF.";
+        return;
+      }
+
+      if (file.size > maxPastedPhotoBytes) {
+        photoPasteStatus.textContent = "Фотография больше 20 МБ. Уменьшите её размер и попробуйте снова.";
+        return;
+      }
+
+      if (pendingPastedPhoto?.previewUrl) URL.revokeObjectURL(pendingPastedPhoto.previewUrl);
+      pendingPastedPhoto = {
+        blob: file,
+        previewUrl: URL.createObjectURL(file)
+      };
+      photoPasteImage.src = pendingPastedPhoto.previewUrl;
+      photoPastePreview.hidden = false;
+      photoPasteAddButton.disabled = false;
+      photoPasteCancelButton.hidden = false;
+      photoPasteStatus.textContent = "Фото готово к добавлению.";
+    }
+
+    function clearPendingPastedPhoto() {
+      if (pendingPastedPhoto?.previewUrl) URL.revokeObjectURL(pendingPastedPhoto.previewUrl);
+      pendingPastedPhoto = null;
+      photoPasteImage.removeAttribute("src");
+      photoPastePreview.hidden = true;
+      photoPasteAddButton.disabled = true;
+      photoPasteCancelButton.hidden = true;
+    }
+
+    photoPasteInput.addEventListener("paste", (event) => {
+      const clipboardItems = [...(event.clipboardData?.items || [])];
+      const imageItem = clipboardItems.find((item) => item.type.startsWith("image/"));
+      if (!imageItem) return;
+
+      event.preventDefault();
+      const file = imageItem.getAsFile();
+      if (!file) {
+        photoPasteStatus.textContent = "Не удалось получить изображение из буфера. Попробуйте скопировать его ещё раз.";
+        return;
+      }
+
+      setPendingPastedPhoto(file);
+    });
+
+    photoPasteAddButton.addEventListener("click", async () => {
+      if (!pendingPastedPhoto) return;
+
+      photoPasteAddButton.disabled = true;
+      photoPasteStatus.textContent = "Сохраняю фотографию в этом браузере…";
+      try {
+        const record = await savePastedPhoto(pendingPastedPhoto.blob);
+        displayPastedPhoto(record);
+        clearPendingPastedPhoto();
+        photoPasteInput.value = "";
+        photoPasteStatus.textContent = "Фотография добавлена и сохранена в этом браузере.";
+      } catch (error) {
+        console.error("Не удалось сохранить вставленную фотографию.", error);
+        photoPasteAddButton.disabled = false;
+        photoPasteStatus.textContent = "Не удалось сохранить фото. Возможно, не хватает места в хранилище браузера.";
+      }
+    });
+
+    photoPasteCancelButton.addEventListener("click", () => {
+      clearPendingPastedPhoto();
+      photoPasteInput.value = "";
+      photoPasteStatus.textContent = "Вставка отменена.";
+    });
 
     function openPhotoViewer(photoUrl, trigger) {
       photoViewerReturnFocus = trigger;
@@ -1896,6 +2189,13 @@
       addedPhotoUrls.add(photoUrl);
       photoList.prepend(createPhotoCard(photoUrl));
     }
+
+    loadPastedPhotos()
+      .then((records) => records.forEach(displayPastedPhoto))
+      .catch((error) => {
+        console.error("Не удалось загрузить фотографии из локального хранилища.", error);
+        photoPasteStatus.textContent = "Не удалось загрузить фотографии из этого браузера.";
+      });
   </script>
 </body>
 </html>
