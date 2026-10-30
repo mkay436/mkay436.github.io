@@ -4,396 +4,93 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111114">
-  <title>HOLLYWOOD LEGENDS — SA:MP форум</title>
+  <title>HOLLYWOOD DAYS</title>
   <style>
     :root {
       color-scheme: dark;
-      --bg: #111114;
-      --panel: #1a1a1f;
-      --panel-light: #222228;
-      --line: #303037;
-      --text: #f5f2ed;
-      --muted: #a4a1a0;
-      --gold: #f2b84b;
-      --red: #e85c4a;
       font-family: Inter, "Segoe UI", Arial, sans-serif;
+      background: #111114;
+      color: #f5f2ed;
     }
 
     * { box-sizing: border-box; }
 
     body {
-      margin: 0;
       min-width: 320px;
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
       background:
-        radial-gradient(ellipse at 80% 0%, #33231b 0, transparent 35rem),
-        var(--bg);
-      color: var(--text);
+        radial-gradient(ellipse at 50% 46%, #a66a2c30 0, transparent 34rem),
+        linear-gradient(145deg, #171619, #101013 60%, #191411);
     }
 
-    button, input { font: inherit; }
-    button { color: inherit; }
-    a { color: inherit; text-decoration: none; }
-    .wrap { width: min(1180px, calc(100% - 40px)); margin: 0 auto; }
+    .hollywood-days {
+      position: relative;
+      isolation: isolate;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      min-height: 100vh;
+      padding: 32px 20px;
+      overflow: hidden;
+    }
 
-    .topbar {
-      height: 68px;
-      border-bottom: 1px solid #ffffff12;
-      background: #111114dd;
-      display: flex;
-      align-items: center;
+    .hollywood-days::before,
+    .hollywood-days::after {
+      position: absolute;
+      z-index: -1;
+      content: "";
+      pointer-events: none;
     }
-    .topbar-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
-    .brand { display: flex; align-items: center; gap: 11px; font-size: 15px; font-weight: 900; letter-spacing: 1.5px; }
-    .brand-mark {
-      display: grid; place-items: center; width: 35px; height: 35px;
-      border: 1px solid var(--gold); border-radius: 50%; color: var(--gold);
-      font-family: Georgia, serif; font-size: 20px;
-    }
-    .brand span:last-child { color: var(--gold); }
-    .nav { display: flex; align-items: center; gap: 26px; color: #c3c0bd; font-size: 13px; }
-    .nav a:hover, .nav a.active { color: var(--gold); }
-    .top-actions { display: flex; align-items: center; gap: 10px; }
-    .button {
-      border: 0; border-radius: 7px; padding: 11px 16px; font-weight: 750;
-      background: var(--gold); color: #21180b; cursor: pointer; transition: .18s ease;
-    }
-    .button:hover { background: #ffd071; transform: translateY(-1px); }
-    .button-outline { border: 1px solid #ffffff2a; background: #ffffff0a; color: var(--text); }
-    .button-outline:hover { background: #ffffff15; }
 
-    .hero {
-      min-height: 315px; display: flex; align-items: center; position: relative; overflow: hidden;
-      border-bottom: 1px solid #ffffff12;
+    .hollywood-days::before {
+      inset: 18px;
+      border: 1px solid #f2b84b26;
     }
-    .hero:before {
-      content: ""; position: absolute; inset: 0 0 0 42%;
-      background:
-        linear-gradient(90deg, var(--bg), #11111422 46%, #11111488),
-        radial-gradient(ellipse at 65% 58%, #e1873b55, transparent 20%),
-        linear-gradient(145deg, transparent 30%, #402d25 30% 31%, transparent 31% 49%, #282024 49% 50%, transparent 50%),
-        linear-gradient(15deg, #1d2224, #352522 44%, #17191d);
-      opacity: .8;
+
+    .hollywood-days::after {
+      width: min(72vw, 680px);
+      aspect-ratio: 1;
+      border: 1px solid #f2b84b12;
+      border-radius: 50%;
+      box-shadow: 0 0 0 55px #f2b84b08, 0 0 0 110px #f2b84b05;
     }
-    .hero:after {
-      content: "HL"; position: absolute; right: 12%; top: 50%; transform: translateY(-50%);
-      font: 900 clamp(110px, 20vw, 230px)/1 Georgia, serif; color: #f2b84b13;
-      letter-spacing: -18px; pointer-events: none;
+
+    h1 {
+      margin: 0;
+      color: #f5f2ed;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(42px, 10vw, 112px);
+      font-weight: 700;
+      letter-spacing: clamp(2px, 1.2vw, 13px);
+      line-height: 1;
+      text-align: center;
+      text-shadow: 0 4px 38px #f2b84b2b;
     }
-    .hero-content { position: relative; z-index: 1; padding: 48px 0; max-width: 620px; }
-    .eyebrow { color: var(--gold); text-transform: uppercase; letter-spacing: 2.4px; font-size: 10px; font-weight: 800; }
-    h1 { margin: 15px 0 13px; font-size: clamp(36px, 5vw, 58px); letter-spacing: -2px; line-height: 1.02; }
-    h1 span { color: var(--gold); }
-    .hero p { color: #c2bfbd; max-width: 510px; line-height: 1.7; margin: 0; font-size: 15px; }
-    .hero-buttons { display: flex; gap: 11px; margin-top: 24px; }
 
-    .stats { display: flex; gap: 28px; margin-top: 29px; }
-    .stat { display: flex; align-items: baseline; gap: 7px; color: var(--muted); font-size: 12px; }
-    .stat strong { color: #f5f2ed; font-size: 16px; }
-
-    main { padding: 35px 0 70px; }
-    .section-heading { display: flex; justify-content: space-between; align-items: end; gap: 18px; margin-bottom: 18px; }
-    .section-heading h2 { font-size: 22px; margin: 0 0 5px; letter-spacing: -.5px; }
-    .section-heading p { color: var(--muted); margin: 0; font-size: 13px; }
-    .online { color: #a9aaa5; font-size: 12px; white-space: nowrap; }
-    .online i { display: inline-block; width: 7px; height: 7px; margin-right: 7px; border-radius: 50%; background: #6bc77d; box-shadow: 0 0 10px #6bc77d66; }
-
-    .categories { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 34px; }
-    .category {
-      text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 9px;
-      padding: 16px; cursor: pointer; transition: .18s ease;
+    h1 span {
+      display: block;
+      margin-top: 12px;
+      color: #f2b84b;
+      font-size: .68em;
+      letter-spacing: clamp(8px, 2.4vw, 26px);
     }
-    .category:hover, .category.selected { border-color: #b98c3f; background: #28231b; transform: translateY(-2px); }
-    .category-icon { font-size: 22px; }
-    .category strong { display: block; margin: 11px 0 5px; font-size: 13px; }
-    .category small { color: var(--muted); font-size: 11px; }
 
-    .feed-layout { display: grid; grid-template-columns: minmax(0, 1fr) 285px; gap: 22px; align-items: start; }
-    .feed-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; }
-    .tabs { display: flex; gap: 5px; }
-    .tab { background: none; border: 0; color: var(--muted); padding: 9px 11px; cursor: pointer; font-size: 12px; border-radius: 6px; }
-    .tab.active { background: var(--panel-light); color: var(--text); }
-    .search { position: relative; }
-    .search input { width: 190px; border: 1px solid var(--line); background: var(--panel); color: var(--text); outline: none; border-radius: 6px; padding: 9px 10px 9px 31px; font-size: 11px; }
-    .search input:focus { border-color: #a27a36; }
-    .search span { position: absolute; left: 10px; top: 7px; color: #8d8a88; }
-
-    .post-list { display: grid; gap: 12px; }
-    .post {
-      display: grid; grid-template-columns: 150px minmax(0, 1fr); min-height: 142px;
-      overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: var(--panel);
-      transition: border-color .2s;
-    }
-    .post:hover { border-color: #55504a; }
-    .post-art {
-      min-height: 142px; display: grid; place-items: center; position: relative; overflow: hidden;
-      background: linear-gradient(145deg, #856344, #252b2a 64%, #1a1b1e);
-    }
-    .post-art:before, .post-art:after { content: ""; position: absolute; }
-    .post-art:before { width: 150%; height: 42%; bottom: -16%; background: #151719; transform: rotate(-12deg); }
-    .post-art:after { width: 40px; height: 82px; bottom: 20px; border-radius: 19px 19px 8px 8px; background: linear-gradient(#1b1d1f 20%, #8a5439 20% 62%, #232326 62%); box-shadow: 32px 16px 0 -7px #d4a15b; }
-    .post-art .play {
-      z-index: 1; display: grid; place-items: center; width: 38px; height: 38px; margin-top: -22px;
-      border-radius: 50%; background: #111b; border: 1px solid #ffffff88; color: white; font-size: 13px; padding-left: 2px;
-    }
-    .art-city { background: linear-gradient(145deg, #e1a657, #614733 45%, #222b30 46%, #14181d); }
-    .art-city:after { height: 67px; bottom: 20px; background: linear-gradient(#252326 20%, #49342c 20% 65%, #1d1b20 65%); box-shadow: -34px 21px 0 -7px #30363a, 38px 15px 0 -8px #c28945; }
-    .art-fail { background: linear-gradient(145deg, #823e32, #252427 60%, #15171c); }
-    .art-race { background: linear-gradient(145deg, #30534c, #cf9a4f 50%, #232629 51%); }
-    .art-race:after { width: 76px; height: 28px; bottom: 32px; border-radius: 18px 22px 7px 7px; background: #c84838; box-shadow: 8px 5px 0 -1px #232326; }
-
-    .post-body { min-width: 0; padding: 14px 16px 12px; display: flex; flex-direction: column; }
-    .post-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; color: var(--muted); font-size: 10px; }
-    .tag { color: var(--gold); background: #f2b84b16; border: 1px solid #f2b84b22; padding: 4px 7px; border-radius: 4px; font-weight: 700; }
-    .post h3 { font-size: 15px; line-height: 1.35; margin: 10px 0 5px; }
-    .post-desc { color: #aaa7a5; font-size: 11px; line-height: 1.5; margin: 0 0 12px; }
-    .post-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: auto; }
-    .author { display: flex; align-items: center; gap: 7px; color: #d2cfcb; font-size: 10px; }
-    .avatar { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; background: #704d3a; color: #ffe0aa; font-size: 9px; font-weight: 800; }
-    .post-stats { display: flex; gap: 12px; color: #989594; font-size: 10px; }
-    .like { border: 0; background: transparent; color: inherit; padding: 0; cursor: pointer; }
-    .like.liked { color: #f0766d; }
-
-    .sidebar { display: grid; gap: 14px; }
-    .side-card { border: 1px solid var(--line); border-radius: 9px; background: var(--panel); padding: 17px; }
-    .side-card h3 { margin: 0 0 13px; font-size: 14px; }
-    .topic { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid #ffffff0d; font-size: 11px; }
-    .topic:first-of-type { border-top: 0; }
-    .topic span { color: var(--muted); white-space: nowrap; }
-    .member { display: flex; align-items: center; gap: 9px; margin: 12px 0; font-size: 11px; }
-    .member .avatar { width: 28px; height: 28px; font-size: 10px; }
-    .member small { display: block; color: var(--muted); margin-top: 3px; }
-    .welcome { background: linear-gradient(135deg, #382a1b, #211d1a 72%); border-color: #5b4528; }
-    .welcome p { color: #c2b9ae; font-size: 11px; line-height: 1.6; margin: -4px 0 14px; }
-    .welcome .button { width: 100%; font-size: 11px; }
-    .empty { color: var(--muted); text-align: center; padding: 38px 15px; border: 1px dashed var(--line); border-radius: 9px; }
-    footer { border-top: 1px solid #ffffff12; color: #817e7c; padding: 22px 0; font-size: 11px; }
-    footer .wrap { display: flex; justify-content: space-between; gap: 15px; }
-
-    @media (max-width: 850px) {
-      .nav { display: none; }
-      .feed-layout { grid-template-columns: 1fr; }
-      .sidebar { grid-template-columns: repeat(2, 1fr); }
-      .welcome { grid-column: 1 / -1; }
-      .hero:before { left: 25%; }
-    }
-    @media (max-width: 600px) {
-      .wrap { width: min(100% - 28px, 1180px); }
-      .topbar { height: 60px; }
-      .brand { font-size: 12px; letter-spacing: 1px; }
-      .brand-mark { width: 31px; height: 31px; }
-      .hero { min-height: 340px; }
-      .hero:before { inset: 0 0 0 10%; opacity: .55; }
-      .hero-content { padding: 38px 0; }
-      .hero p { font-size: 13px; }
-      .stats { gap: 16px; flex-wrap: wrap; }
-      .categories { grid-template-columns: repeat(2, 1fr); gap: 9px; margin-bottom: 28px; }
-      .category { padding: 12px; }
-      .section-heading { align-items: start; }
-      .online { padding-top: 5px; }
-      .feed-toolbar { align-items: stretch; flex-direction: column; }
-      .tabs { overflow-x: auto; }
-      .search input { width: 100%; }
-      .post { grid-template-columns: 105px minmax(0, 1fr); min-height: 145px; }
-      .post-art { min-height: 145px; }
-      .post-body { padding: 11px; }
-      .post h3 { font-size: 13px; margin-top: 8px; }
-      .post-desc { font-size: 10px; }
-      .post-stats { gap: 7px; }
-      .sidebar { grid-template-columns: 1fr; }
-      footer .wrap { flex-direction: column; }
+    @media (max-width: 480px) {
+      .hollywood-days::before { inset: 10px; }
+      h1 { letter-spacing: 2px; }
+      h1 span { letter-spacing: 8px; }
     }
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="wrap topbar-inner">
-      <a class="brand" href="#" aria-label="HOLLYWOOD LEGENDS — на главную">
-        <span class="brand-mark">H</span><span>HOLLYWOOD <span>LEGENDS</span></span>
-      </a>
-      <nav class="nav" aria-label="Основная навигация">
-        <a class="active" href="#feed">Форум</a>
-        <a href="#categories">Разделы</a>
-        <a href="#popular">Популярное</a>
-        <a href="#community">Сообщество</a>
-      </nav>
-    </div>
-  </header>
-
-  <section class="hero">
-    <div class="wrap">
-      <div class="hero-content">
-        <div class="eyebrow">Истории, которые хочется пересматривать</div>
-        <h1>HOLLYWOOD<br><span>LEGENDS</span></h1>
-        <p>Твоя площадка для прохождений, игровых историй и самых смешных моментов из SA:MP. Заходи — здесь всегда есть что посмотреть.</p>
-        <div class="hero-buttons">
-          <a class="button" href="#feed">Смотреть публикации</a>
-        </div>
-        <div class="stats">
-          <div class="stat"><strong>2.4K</strong> участников</div>
-          <div class="stat"><strong>186</strong> видео</div>
-          <div class="stat"><strong>38</strong> онлайн</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <main class="wrap">
-    <section id="categories">
-      <div class="section-heading">
-        <div><h2>Выбирай, что посмотреть</h2><p>Лучшие истории и моменты нашего сообщества</p></div>
-        <div class="online"><i></i>38 игроков сейчас на форуме</div>
-      </div>
-      <div class="categories">
-        <button class="category selected" data-filter="all"><span class="category-icon">🎬</span><strong>Все публикации</strong><small>Прохождения и видео</small></button>
-        <button class="category" data-filter="walkthrough"><span class="category-icon">🗺️</span><strong>Прохождения</strong><small>Квесты, миссии, маршруты</small></button>
-        <button class="category" data-filter="fun"><span class="category-icon">😂</span><strong>Весёлые моменты</strong><small>Фейлы и неожиданные встречи</small></button>
-        <button class="category" data-filter="stories"><span class="category-icon">🌆</span><strong>Истории из игры</strong><small>Жизнь на улицах San Andreas</small></button>
-      </div>
-    </section>
-
-    <section class="feed-layout" id="feed">
-      <div>
-        <div class="feed-toolbar">
-          <div class="tabs" role="tablist" aria-label="Сортировка публикаций">
-            <button class="tab active" data-sort="new">Новое</button>
-            <button class="tab" data-sort="popular">Популярное</button>
-            <button class="tab" data-sort="discussed">Обсуждают</button>
-          </div>
-          <label class="search"><span>⌕</span><input id="search" type="search" placeholder="Найти публикацию..." aria-label="Найти публикацию"></label>
-        </div>
-
-        <div class="post-list" id="post-list">
-          <article class="post" data-category="walkthrough" data-likes="248" data-comments="32" data-title="Прошёл весь квест за один вечер: вот что нашёл">
-            <div class="post-art"><span class="play">▶</span></div>
-            <div class="post-body">
-              <div class="post-meta"><span class="tag">ПРОХОЖДЕНИЕ</span><span>·</span><span>2 часа назад</span></div>
-              <h3>Прошёл весь квест за один вечер: вот что нашёл</h3>
-              <p class="post-desc">Собрал в одном видео все задания, пару секретных маршрутов и момент, когда всё пошло не по плану.</p>
-              <div class="post-footer">
-                <div class="author"><span class="avatar">М</span> Max_Vega</div>
-                <div class="post-stats"><button class="like" aria-label="Нравится">♥ <span>248</span></button><span>◌ 32</span><span>◷ 14:32</span></div>
-              </div>
-            </div>
-          </article>
-          <article class="post" data-category="fun" data-likes="176" data-comments="21" data-title="Когда решил просто прокатиться, но встретил своих">
-            <div class="post-art art-fail"><span class="play">▶</span></div>
-            <div class="post-body">
-              <div class="post-meta"><span class="tag">ВЕСЁЛЫЕ МОМЕНТЫ</span><span>·</span><span>5 часов назад</span></div>
-              <h3>Когда решил просто прокатиться, но встретил своих</h3>
-              <p class="post-desc">План был спокойный. План продержался ровно семь секунд. Включайте звук — финал отличный.</p>
-              <div class="post-footer">
-                <div class="author"><span class="avatar" style="background:#3e5b54">К</span> Kira_Ray</div>
-                <div class="post-stats"><button class="like" aria-label="Нравится">♥ <span>176</span></button><span>◌ 21</span><span>◷ 00:48</span></div>
-              </div>
-            </div>
-          </article>
-          <article class="post" data-category="stories" data-likes="132" data-comments="18" data-title="Ночная смена в Лос-Сантосе — маленькая история">
-            <div class="post-art art-city"><span class="play">▶</span></div>
-            <div class="post-body">
-              <div class="post-meta"><span class="tag">ИСТОРИЯ ИЗ ИГРЫ</span><span>·</span><span>Вчера</span></div>
-              <h3>Ночная смена в Лос-Сантосе — маленькая история</h3>
-              <p class="post-desc">Один вечер, случайная встреча и поездка через весь город. Иногда лучшие истории не планируются.</p>
-              <div class="post-footer">
-                <div class="author"><span class="avatar" style="background:#624a70">А</span> Alex_Morgan</div>
-                <div class="post-stats"><button class="like" aria-label="Нравится">♥ <span>132</span></button><span>◌ 18</span><span>◷ 06:12</span></div>
-              </div>
-            </div>
-          </article>
-          <article class="post" data-category="fun" data-likes="94" data-comments="12" data-title="Гонка века: финиш был неожиданным">
-            <div class="post-art art-race"><span class="play">▶</span></div>
-            <div class="post-body">
-              <div class="post-meta"><span class="tag">ВЕСЁЛЫЕ МОМЕНТЫ</span><span>·</span><span>Вчера</span></div>
-              <h3>Гонка века: финиш был неожиданным</h3>
-              <p class="post-desc">Три круга, пять участников и один очень спорный поворот. Кто, по-вашему, заслужил победу?</p>
-              <div class="post-footer">
-                <div class="author"><span class="avatar" style="background:#425d72">Д</span> Dima_Storm</div>
-                <div class="post-stats"><button class="like" aria-label="Нравится">♥ <span>94</span></button><span>◌ 12</span><span>◷ 03:06</span></div>
-              </div>
-            </div>
-          </article>
-          <div class="empty" id="empty" hidden>Ничего не нашлось. Попробуй изменить запрос или раздел.</div>
-        </div>
-      </div>
-
-      <aside class="sidebar">
-        <section class="side-card welcome">
-          <h3>О сообществе</h3>
-          <p>Здесь собраны игровые истории, прохождения и яркие моменты SA:MP.</p>
-        </section>
-        <section class="side-card" id="popular">
-          <h3>🔥 Сейчас обсуждают</h3>
-          <div class="topic"><a href="#feed">Самый быстрый маршрут к финалу</a><span>32</span></div>
-          <div class="topic"><a href="#feed">Делимся лучшими фейлами недели</a><span>21</span></div>
-          <div class="topic"><a href="#feed">Кто помнит эту старую локацию?</a><span>18</span></div>
-        </section>
-        <section class="side-card" id="community">
-          <h3>⭐ Легенды недели</h3>
-          <div class="member"><span class="avatar">М</span><div>Max_Vega<small>Автор недели · 12 видео</small></div></div>
-          <div class="member"><span class="avatar" style="background:#3e5b54">К</span><div>Kira_Ray<small>Королева фейлов · 8 видео</small></div></div>
-          <div class="member"><span class="avatar" style="background:#624a70">А</span><div>Alex_Morgan<small>Лучший рассказчик</small></div></div>
-        </section>
-      </aside>
+  <main>
+    <section class="hollywood-days" aria-label="HOLLYWOOD DAYS">
+      <h1>HOLLYWOOD<span>DAYS</span></h1>
     </section>
   </main>
-
-  <footer>
-    <div class="wrap"><span>© 2026 HOLLYWOOD LEGENDS · Сообщество поклонников SA:MP</span><span>Сделано игроками — для игроков</span></div>
-  </footer>
-
-  <script>
-    const posts = [...document.querySelectorAll(".post")];
-    const originalOrder = new Map(posts.map((post, index) => [post, index]));
-    const list = document.querySelector("#post-list");
-    const empty = document.querySelector("#empty");
-    const search = document.querySelector("#search");
-    let activeFilter = "all";
-    let activeSort = "new";
-
-    function updateFeed() {
-      const query = search.value.trim().toLocaleLowerCase("ru");
-      const visible = posts.filter((post) => {
-        const categoryMatches = activeFilter === "all" || post.dataset.category === activeFilter;
-        const textMatches = post.dataset.title.toLocaleLowerCase("ru").includes(query);
-        post.hidden = !(categoryMatches && textMatches);
-        return !post.hidden;
-      });
-
-      visible.sort((a, b) => activeSort === "new"
-        ? originalOrder.get(a) - originalOrder.get(b)
-        : Number(b.dataset[activeSort === "popular" ? "likes" : "comments"]) -
-          Number(a.dataset[activeSort === "popular" ? "likes" : "comments"]));
-      visible.forEach((post) => list.insertBefore(post, empty));
-      empty.hidden = visible.length > 0;
-    }
-
-    document.querySelectorAll(".category").forEach((button) => {
-      button.addEventListener("click", () => {
-        document.querySelector(".category.selected").classList.remove("selected");
-        button.classList.add("selected");
-        activeFilter = button.dataset.filter;
-        updateFeed();
-      });
-    });
-
-    document.querySelectorAll(".tab").forEach((button) => {
-      button.addEventListener("click", () => {
-        document.querySelector(".tab.active").classList.remove("active");
-        button.classList.add("active");
-        activeSort = button.dataset.sort;
-        updateFeed();
-      });
-    });
-
-    search.addEventListener("input", updateFeed);
-
-    document.querySelectorAll(".like").forEach((button) => {
-      button.addEventListener("click", () => {
-        const count = button.querySelector("span");
-        const liked = button.classList.toggle("liked");
-        count.textContent = String(Number(count.textContent) + (liked ? 1 : -1));
-      });
-    });
-
-  </script>
 </body>
 </html>
