@@ -727,6 +727,41 @@
       background: #09090a;
     }
 
+    .photo-preview {
+      display: block;
+      width: 100%;
+      padding: 0;
+      border: 0;
+      background: #09090a;
+      cursor: zoom-in;
+    }
+
+    .photo-preview:focus-visible {
+      outline: 2px solid #43b96f;
+      outline-offset: -2px;
+    }
+
+    .photo-preview:disabled {
+      cursor: default;
+    }
+
+    .photo-download {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid #43b96f;
+      border-radius: 5px;
+      background: transparent;
+      color: #7de39b;
+      font: inherit;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .photo-download:hover {
+      background: #43b96f;
+      color: #101712;
+    }
+
     .photo-card .photo-error {
       display: grid;
       min-height: 140px;
@@ -735,6 +770,107 @@
       color: #f0aaa0;
       font-size: 14px;
       text-align: center;
+    }
+
+    .photo-card .video-card-footer {
+      flex-wrap: wrap;
+    }
+
+    .photo-card .video-card-footer p {
+      flex: 1 1 100%;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      clip-path: inset(50%);
+    }
+
+    body.photo-viewer-open {
+      overflow: hidden;
+    }
+
+    .photo-viewer[hidden] {
+      display: none;
+    }
+
+    .photo-viewer {
+      position: fixed;
+      z-index: 20;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+      padding: clamp(12px, 3vw, 28px);
+      background: #080a08f2;
+      backdrop-filter: blur(8px);
+    }
+
+    .photo-viewer-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .photo-viewer-toolbar button,
+    .photo-viewer-toolbar a {
+      display: inline-flex;
+      min-height: 40px;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border: 1px solid #ffffff3b;
+      border-radius: 5px;
+      background: #202420;
+      color: #f5f2ed;
+      font: inherit;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .photo-viewer-toolbar button:hover,
+    .photo-viewer-toolbar a:hover {
+      border-color: #43b96f;
+    }
+
+    .photo-viewer-toolbar .photo-viewer-download {
+      border-color: #43b96f;
+      background: #43b96f;
+      color: #101712;
+      font-weight: 700;
+    }
+
+    .photo-viewer-scale {
+      min-width: 56px;
+      color: #e6dfd5;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .photo-viewer-stage {
+      display: grid;
+      min-height: 0;
+      overflow: auto;
+      place-items: center;
+      border: 1px solid #ffffff1a;
+      border-radius: 6px;
+      background: #090a09;
+    }
+
+    .photo-viewer-image {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transform: scale(1);
+      transform-origin: center;
+      transition: transform 120ms ease-out;
     }
 
     @media (max-width: 600px) {
@@ -938,6 +1074,20 @@
       <div class="photo-list" id="photo-list" aria-label="Добавленные фотографии"></div>
     </section>
   </main>
+  <section class="photo-viewer" id="photo-viewer" role="dialog" aria-modal="true" aria-labelledby="photo-viewer-title" hidden>
+    <div class="photo-viewer-toolbar">
+      <h2 id="photo-viewer-title" class="visually-hidden">Просмотр фотографии</h2>
+      <button id="photo-zoom-out" type="button" aria-label="Уменьшить фотографию">−</button>
+      <span class="photo-viewer-scale" id="photo-viewer-scale" aria-live="polite">100%</span>
+      <button id="photo-zoom-in" type="button" aria-label="Увеличить фотографию">+</button>
+      <button id="photo-zoom-reset" type="button">Сбросить</button>
+      <button class="photo-viewer-download" id="photo-viewer-download" type="button">Скачать</button>
+      <button id="photo-viewer-close" type="button" aria-label="Закрыть просмотр">Закрыть</button>
+    </div>
+    <div class="photo-viewer-stage">
+      <img class="photo-viewer-image" id="photo-viewer-image" alt="">
+    </div>
+  </section>
   <script>
     const accessCodeHashes = new Set([
       "eb1c68a22921a81de63e52ef5dd79e42e6cd36ea1b40ae9bb5a595b8f055bfd4",
@@ -1335,6 +1485,16 @@
     const photoList = document.querySelector("#photo-list");
     const addedPhotoUrls = new Set();
     const photoStorageKey = "hollywood-gang-postimages-photos";
+    const photoViewer = document.querySelector("#photo-viewer");
+    const photoViewerImage = document.querySelector("#photo-viewer-image");
+    const photoViewerScale = document.querySelector("#photo-viewer-scale");
+    const photoZoomOutButton = document.querySelector("#photo-zoom-out");
+    const photoZoomInButton = document.querySelector("#photo-zoom-in");
+    const photoZoomResetButton = document.querySelector("#photo-zoom-reset");
+    const photoViewerDownloadButton = document.querySelector("#photo-viewer-download");
+    const photoViewerCloseButton = document.querySelector("#photo-viewer-close");
+    let photoZoom = 1;
+    let photoViewerReturnFocus = null;
 
     function saveVideoIds(videoIds) {
       try {
@@ -1513,10 +1673,18 @@
       image.alt = "Фотография объединения Hollywood Gang";
       image.loading = "lazy";
       image.referrerPolicy = "no-referrer";
+
+      const previewButton = document.createElement("button");
+      previewButton.className = "photo-preview";
+      previewButton.type = "button";
+      previewButton.setAttribute("aria-label", "Открыть фотографию в увеличенном виде");
+      previewButton.addEventListener("click", () => openPhotoViewer(photoUrl, previewButton));
+      previewButton.append(image);
       image.addEventListener("error", () => {
-        const errorMessage = document.createElement("p");
+        const errorMessage = document.createElement("span");
         errorMessage.className = "photo-error";
         errorMessage.textContent = "Не удалось загрузить фото. Проверьте прямую ссылку на изображение.";
+        previewButton.disabled = true;
         image.replaceWith(errorMessage);
         photoStatus.textContent = "Одно из фото не загрузилось. Проверьте ссылку Postimages.";
       }, { once: true });
@@ -1526,6 +1694,13 @@
 
       const caption = document.createElement("p");
       caption.textContent = "Фото с Postimages";
+
+      const downloadButton = document.createElement("button");
+      downloadButton.className = "photo-download";
+      downloadButton.type = "button";
+      downloadButton.textContent = "Скачать";
+      downloadButton.setAttribute("aria-label", "Скачать фотографию");
+      downloadButton.addEventListener("click", () => downloadPhoto(photoUrl));
 
       const deleteButton = document.createElement("button");
       deleteButton.className = "video-delete";
@@ -1541,10 +1716,115 @@
         photoStatus.textContent = "Фотография удалена.";
       });
 
-      footer.append(caption, deleteButton);
-      card.append(image, footer);
+      footer.append(caption, downloadButton, deleteButton);
+      card.append(previewButton, footer);
       return card;
     }
+
+    function openPhotoViewer(photoUrl, trigger) {
+      photoViewerReturnFocus = trigger;
+      photoViewerImage.src = photoUrl;
+      photoViewerImage.alt = "Увеличенная фотография объединения Hollywood Gang";
+      photoZoom = 1;
+      updatePhotoZoom();
+      photoViewer.hidden = false;
+      document.body.classList.add("photo-viewer-open");
+      photoViewerCloseButton.focus();
+    }
+
+    function closePhotoViewer() {
+      if (photoViewer.hidden) return;
+
+      photoViewer.hidden = true;
+      photoViewerImage.removeAttribute("src");
+      document.body.classList.remove("photo-viewer-open");
+      if (photoViewerReturnFocus?.isConnected) photoViewerReturnFocus.focus();
+      photoViewerReturnFocus = null;
+    }
+
+    function updatePhotoZoom() {
+      photoViewerImage.style.transform = `scale(${photoZoom})`;
+      photoViewerScale.textContent = `${Math.round(photoZoom * 100)}%`;
+      photoZoomOutButton.disabled = photoZoom <= 1;
+      photoZoomInButton.disabled = photoZoom >= 4;
+    }
+
+    function changePhotoZoom(amount) {
+      photoZoom = Math.min(4, Math.max(1, Math.round((photoZoom + amount) * 100) / 100));
+      updatePhotoZoom();
+    }
+
+    async function downloadPhoto(photoUrl) {
+      photoStatus.textContent = "Подготавливаю фотографию к скачиванию…";
+
+      try {
+        const response = await fetch(photoUrl, { mode: "cors", referrerPolicy: "no-referrer" });
+        if (!response.ok) {
+          throw new Error(`Сервер фотографий вернул HTTP ${response.status}.`);
+        }
+
+        const imageBlob = await response.blob();
+        if (!imageBlob.type.startsWith("image/")) {
+          throw new TypeError("Ссылка не вернула файл изображения.");
+        }
+
+        const downloadUrl = URL.createObjectURL(imageBlob);
+        const link = document.createElement("a");
+        const fileName = new URL(photoUrl).pathname.split("/").pop() || "hollywood-gang-photo";
+        link.href = downloadUrl;
+        link.download = fileName;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 1000);
+        photoStatus.textContent = "Скачивание фотографии началось.";
+      } catch (error) {
+        console.error("Не удалось скачать фотографию напрямую.", error);
+        photoStatus.replaceChildren(
+          document.createTextNode("Хостинг фото не разрешил прямое скачивание. Откройте оригинал и сохраните его через меню браузера: ")
+        );
+        const originalLink = document.createElement("a");
+        originalLink.href = photoUrl;
+        originalLink.target = "_blank";
+        originalLink.rel = "noopener noreferrer";
+        originalLink.textContent = "открыть фото";
+        photoStatus.append(originalLink);
+      }
+    }
+
+    photoZoomOutButton.addEventListener("click", () => changePhotoZoom(-0.25));
+    photoZoomInButton.addEventListener("click", () => changePhotoZoom(0.25));
+    photoZoomResetButton.addEventListener("click", () => {
+      photoZoom = 1;
+      updatePhotoZoom();
+    });
+    photoViewerCloseButton.addEventListener("click", closePhotoViewer);
+    photoViewerDownloadButton.addEventListener("click", () => downloadPhoto(photoViewerImage.src));
+    photoViewer.addEventListener("click", (event) => {
+      if (event.target === photoViewer) closePhotoViewer();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (photoViewer.hidden) return;
+
+      if (event.key === "Escape") {
+        closePhotoViewer();
+      } else if (event.key === "+" || event.key === "=") {
+        changePhotoZoom(0.25);
+      } else if (event.key === "-") {
+        changePhotoZoom(-0.25);
+      } else if (event.key === "Tab") {
+        const focusable = [...photoViewer.querySelectorAll("button:not(:disabled), a[href]")];
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
+    });
 
     videoForm.addEventListener("submit", (event) => {
       event.preventDefault();
