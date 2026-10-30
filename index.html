@@ -67,6 +67,10 @@
       gap: 12px;
     }
 
+    .access-form[hidden] {
+      display: none;
+    }
+
     .access-form label {
       color: #e6dfd5;
       font-size: 14px;
@@ -84,6 +88,11 @@
       font: inherit;
       letter-spacing: 1px;
       text-transform: uppercase;
+    }
+
+    #access-name {
+      letter-spacing: normal;
+      text-transform: none;
     }
 
     .access-form input:focus {
@@ -519,8 +528,22 @@
 <body>
   <section class="access-screen" id="access-screen" role="dialog" aria-modal="true" aria-labelledby="access-title">
     <div class="access-card">
-      <h1 id="access-title">Введите код.</h1>
-      <form class="access-form" id="access-form">
+      <h1 id="access-title">Как тебя зовут?</h1>
+      <form class="access-form" id="access-name-form">
+        <label for="access-name">Имя</label>
+        <input
+          id="access-name"
+          name="name"
+          type="text"
+          autocomplete="name"
+          maxlength="80"
+          aria-describedby="access-status"
+          required
+          autofocus
+        >
+        <button type="submit">Продолжить</button>
+      </form>
+      <form class="access-form" id="access-form" hidden>
         <label for="access-code">Код доступа</label>
         <input
           id="access-code"
@@ -536,6 +559,7 @@
           autofocus
         >
         <button type="submit">Войти</button>
+        <button class="access-guest" id="access-back" type="button">Назад</button>
         <button class="access-guest" id="access-guest" type="button">У меня нет кода. Я буду смотреть.</button>
       </form>
       <p class="access-status" id="access-status" role="status" aria-live="polite"></p>
@@ -621,14 +645,32 @@
       "cc2ccf6aa80c1143a7499abb3bbac9ebc633559150ef5bfae5cb7d7e6f970fe5",
       "7686ede2ac250638f2c371820778823e0e5ea48ea45906a8d99f46f898cd0dbd"
     ]);
+    const universalCodeHashes = new Set([
+      "eb1c68a22921a81de63e52ef5dd79e42e6cd36ea1b40ae9bb5a595b8f055bfd4",
+      "e632f39c680ded7032f20b17df465f7ce19629c94c164f32c007e3b87ab673aa",
+      "00337c4847b1c62c652c8c2316cd4d9901e4fb501d4e40b9658aa99e00fbf8b2"
+    ]);
+    const namedCodeHashes = new Map([
+      ["Артем", "e30ce39423c040ebb471f89f370a3f00067c90a49f945d489786aabe06b44075"],
+      ["Сахар", "4d56b06afbed1500efd15a3ff99dea0aa1400c0cbbd49df96cbb3aeb63a044a0"],
+      ["Пчелкин", "78e0db50488852bc7c9beffc482c40b56d9a0b849c1bbf73e2ec29e4b7b08327"],
+      ["Варбас", "cc2ccf6aa80c1143a7499abb3bbac9ebc633559150ef5bfae5cb7d7e6f970fe5"],
+      ["Никто Никто", "7686ede2ac250638f2c371820778823e0e5ea48ea45906a8d99f46f898cd0dbd"],
+      ["Привеликий Алексей", "4d56b06afbed1500efd15a3ff99dea0aa1400c0cbbd49df96cbb3aeb63a044a0"]
+    ]);
     const accessSessionKey = "hollywood-gang-access-granted";
     const accessScreen = document.querySelector("#access-screen");
+    const accessNameForm = document.querySelector("#access-name-form");
+    const accessNameInput = document.querySelector("#access-name");
     const accessForm = document.querySelector("#access-form");
     const accessCodeInput = document.querySelector("#access-code");
     const accessStatus = document.querySelector("#access-status");
+    const accessTitle = document.querySelector("#access-title");
     const siteContent = document.querySelector("main");
     const accessLogoutButton = document.querySelector("#access-logout");
+    const accessBackButton = document.querySelector("#access-back");
     const accessGuestButton = document.querySelector("#access-guest");
+    let enteredName = "";
 
     function unlockSite(mode = "owner") {
       siteContent.classList.toggle("guest-view", mode === "guest");
@@ -641,12 +683,22 @@
       if (savedAccessMode === "true" || savedAccessMode === "guest") {
         unlockSite(savedAccessMode === "guest" ? "guest" : "owner");
       } else {
-        accessCodeInput.focus();
+        accessNameInput.focus();
       }
     } catch (error) {
       console.error("Не удалось проверить сессию доступа.", error);
       accessStatus.textContent = "Не удалось открыть хранилище браузера. Разрешите его и обновите страницу.";
     }
+
+    accessNameForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      enteredName = accessNameInput.value;
+      accessNameForm.hidden = true;
+      accessForm.hidden = false;
+      accessTitle.textContent = "Введите код.";
+      accessStatus.textContent = "";
+      accessCodeInput.focus();
+    });
 
     accessForm.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -665,7 +717,12 @@
           (byte) => byte.toString(16).padStart(2, "0")
         ).join("");
 
-        if (!accessCodeHashes.has(codeHash)) {
+        const requiredCodeHash = namedCodeHashes.get(enteredName);
+        const isAllowedCode = requiredCodeHash
+          ? codeHash === requiredCodeHash
+          : universalCodeHashes.has(codeHash);
+
+        if (!accessCodeHashes.has(codeHash) || !isAllowedCode) {
           accessStatus.textContent = "Неверный код. Проверьте ввод и попробуйте ещё раз.";
           accessCodeInput.setAttribute("aria-invalid", "true");
           accessCodeInput.select();
@@ -678,6 +735,17 @@
         console.error("Не удалось проверить код доступа.", error);
         accessStatus.textContent = "Не удалось проверить код. Обновите страницу и попробуйте ещё раз.";
       }
+    });
+
+    accessBackButton.addEventListener("click", () => {
+      enteredName = "";
+      accessNameForm.hidden = false;
+      accessForm.hidden = true;
+      accessTitle.textContent = "Как тебя зовут?";
+      accessCodeInput.value = "";
+      accessCodeInput.removeAttribute("aria-invalid");
+      accessStatus.textContent = "";
+      accessNameInput.focus();
     });
 
     accessGuestButton.addEventListener("click", () => {
@@ -706,7 +774,13 @@
 
       siteContent.hidden = true;
       accessScreen.hidden = false;
+      enteredName = "";
+      accessNameInput.value = "";
+      accessNameForm.hidden = false;
+      accessForm.hidden = true;
+      accessTitle.textContent = "Как тебя зовут?";
       accessForm.reset();
+      accessNameInput.focus();
       accessCodeInput.removeAttribute("aria-invalid");
       accessStatus.textContent = logoutError
         ? "Сайт закрыт, но не удалось очистить сессию. Проверьте настройки хранилища браузера."
