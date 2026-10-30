@@ -326,6 +326,38 @@
     const videoStatus = document.querySelector("#video-status");
     const videoList = document.querySelector("#video-list");
     const addedVideoIds = new Set();
+    const videoStorageKey = "hollywood-gang-youtube-videos";
+
+    function saveVideoIds(videoIds) {
+      try {
+        localStorage.setItem(videoStorageKey, JSON.stringify(videoIds));
+        return true;
+      } catch (error) {
+        console.error("Не удалось сохранить список видео в браузере.", error);
+        videoStatus.textContent = "Не удалось сохранить видео в этом браузере. Проверьте настройки хранилища.";
+        return false;
+      }
+    }
+
+    function loadVideoIds() {
+      try {
+        const savedVideos = localStorage.getItem(videoStorageKey);
+        if (savedVideos === null) return [];
+
+        const parsedVideos = JSON.parse(savedVideos);
+        if (!Array.isArray(parsedVideos)) {
+          throw new TypeError("Сохраненный список видео должен быть массивом.");
+        }
+
+        return [...new Set(parsedVideos.filter(
+          (videoId) => typeof videoId === "string" && /^[A-Za-z0-9_-]{11}$/.test(videoId)
+        ))];
+      } catch (error) {
+        console.error("Не удалось загрузить сохраненный список видео.", error);
+        videoStatus.textContent = "Не удалось загрузить сохраненные видео. Проверьте настройки хранилища браузера.";
+        return [];
+      }
+    }
 
     function getYouTubeVideoId(value) {
       let url;
@@ -371,22 +403,7 @@
       return videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId) ? videoId : null;
     }
 
-    videoForm.addEventListener("submit", (event) => {
-      event.preventDefault();
-      const videoId = getYouTubeVideoId(videoUrlInput.value);
-
-      if (!videoId) {
-        videoStatus.textContent = "Не удалось добавить видео. Укажите корректную ссылку YouTube.";
-        videoUrlInput.setAttribute("aria-invalid", "true");
-        return;
-      }
-
-      if (addedVideoIds.has(videoId)) {
-        videoStatus.textContent = "Это видео уже добавлено.";
-        videoUrlInput.removeAttribute("aria-invalid");
-        return;
-      }
-
+    function createVideoCard(videoId) {
       const card = document.createElement("article");
       card.className = "video-card";
 
@@ -413,6 +430,9 @@
       deleteButton.textContent = "Удалить";
       deleteButton.setAttribute("aria-label", "Удалить видео YouTube");
       deleteButton.addEventListener("click", () => {
+        const remainingVideoIds = [...addedVideoIds].filter((savedId) => savedId !== videoId);
+        if (!saveVideoIds(remainingVideoIds)) return;
+
         card.remove();
         addedVideoIds.delete(videoId);
         videoStatus.textContent = "Видео удалено.";
@@ -421,8 +441,30 @@
       frameContainer.append(frame);
       footer.append(caption, deleteButton);
       card.append(frameContainer, footer);
-      videoList.prepend(card);
+      return card;
+    }
+
+    videoForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const videoId = getYouTubeVideoId(videoUrlInput.value);
+
+      if (!videoId) {
+        videoStatus.textContent = "Не удалось добавить видео. Укажите корректную ссылку YouTube.";
+        videoUrlInput.setAttribute("aria-invalid", "true");
+        return;
+      }
+
+      if (addedVideoIds.has(videoId)) {
+        videoStatus.textContent = "Это видео уже добавлено.";
+        videoUrlInput.removeAttribute("aria-invalid");
+        return;
+      }
+
+      if (!saveVideoIds([...addedVideoIds, videoId])) return;
+
       addedVideoIds.add(videoId);
+      videoList.prepend(createVideoCard(videoId));
+
       videoForm.reset();
       videoUrlInput.removeAttribute("aria-invalid");
       videoStatus.textContent = "Видео добавлено.";
@@ -432,6 +474,11 @@
       videoUrlInput.removeAttribute("aria-invalid");
       videoStatus.textContent = "";
     });
+
+    for (const videoId of loadVideoIds()) {
+      addedVideoIds.add(videoId);
+      videoList.prepend(createVideoCard(videoId));
+    }
   </script>
 </body>
 </html>
