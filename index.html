@@ -124,6 +124,113 @@
       font-weight: 600;
     }
 
+    .videos-section {
+      margin-top: 28px;
+    }
+
+    .videos-section h2 {
+      margin: 0 0 16px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(24px, 4vw, 32px);
+    }
+
+    .video-form {
+      display: flex;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid #f2b84b26;
+      border-radius: 8px;
+      background: #1b191b;
+    }
+
+    .video-form label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      clip-path: inset(50%);
+    }
+
+    .video-form input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid #ffffff24;
+      border-radius: 5px;
+      outline: none;
+      background: #111114;
+      color: #f5f2ed;
+      font: inherit;
+    }
+
+    .video-form input:focus {
+      border-color: #d3a84f;
+      box-shadow: 0 0 0 3px #d3a84f26;
+    }
+
+    .video-form button {
+      padding: 12px 18px;
+      border: 1px solid #d3a84f;
+      border-radius: 5px;
+      background: #d3a84f;
+      color: #171411;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 160ms ease, color 160ms ease;
+    }
+
+    .video-form button:hover {
+      background: #f2b84b;
+    }
+
+    .video-hint,
+    .video-status {
+      margin: 10px 2px 0;
+      color: #aaa5a0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .video-status:not(:empty) {
+      color: #f0c66c;
+    }
+
+    .video-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .video-card {
+      overflow: hidden;
+      border: 1px solid #f2b84b26;
+      border-radius: 8px;
+      background: #1b191b;
+    }
+
+    .video-frame {
+      aspect-ratio: 16 / 9;
+      background: #09090a;
+    }
+
+    .video-frame iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .video-card p {
+      margin: 0;
+      padding: 12px 14px;
+      color: #e6dfd5;
+      font-size: 14px;
+    }
+
     @media (max-width: 600px) {
       main {
         width: min(100% - 32px, 1528px);
@@ -134,6 +241,10 @@
         gap: 6px 8px;
         margin-bottom: 36px;
         font-size: 13px;
+      }
+
+      .video-form {
+        flex-direction: column;
       }
     }
   </style>
@@ -162,6 +273,125 @@
         <span>Адрес: <strong>185.169.134.84:7777</strong></span>
       </div>
     </section>
+
+    <section class="videos-section" aria-labelledby="videos-title">
+      <h2 id="videos-title">Видео объединения</h2>
+      <form class="video-form" id="video-form">
+        <label for="video-url">Ссылка на видео YouTube</label>
+        <input
+          id="video-url"
+          name="videoUrl"
+          type="text"
+          inputmode="url"
+          autocomplete="url"
+          placeholder="Вставьте ссылку на YouTube"
+          aria-describedby="video-hint video-status"
+          required
+        >
+        <button type="submit">Добавить видео</button>
+      </form>
+      <p class="video-hint" id="video-hint">Принимаются ссылки youtube.com и youtu.be. Другие сайты не поддерживаются.</p>
+      <p class="video-status" id="video-status" role="status" aria-live="polite"></p>
+      <div class="video-list" id="video-list" aria-label="Добавленные видео"></div>
+    </section>
   </main>
+  <script>
+    const videoForm = document.querySelector("#video-form");
+    const videoUrlInput = document.querySelector("#video-url");
+    const videoStatus = document.querySelector("#video-status");
+    const videoList = document.querySelector("#video-list");
+    const addedVideoIds = new Set();
+
+    function getYouTubeVideoId(value) {
+      let url;
+
+      try {
+        url = new URL(value.trim());
+      } catch {
+        return null;
+      }
+
+      const allowedHosts = new Set([
+        "youtube.com",
+        "www.youtube.com",
+        "m.youtube.com",
+        "youtu.be",
+        "www.youtu.be"
+      ]);
+
+      if (
+        url.protocol !== "https:" ||
+        url.username ||
+        url.password ||
+        url.port ||
+        !allowedHosts.has(url.hostname.toLowerCase())
+      ) {
+        return null;
+      }
+
+      const path = url.pathname.split("/").filter(Boolean);
+      let videoId = null;
+
+      if (url.hostname.toLowerCase().endsWith("youtu.be")) {
+        if (path.length === 1) videoId = path[0];
+      } else if (path.length === 1 && path[0] === "watch") {
+        videoId = url.searchParams.get("v");
+      } else if (
+        path.length === 2 &&
+        ["embed", "shorts", "live"].includes(path[0])
+      ) {
+        videoId = path[1];
+      }
+
+      return videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId) ? videoId : null;
+    }
+
+    videoForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const videoId = getYouTubeVideoId(videoUrlInput.value);
+
+      if (!videoId) {
+        videoStatus.textContent = "Не удалось добавить видео. Укажите корректную ссылку YouTube.";
+        videoUrlInput.setAttribute("aria-invalid", "true");
+        return;
+      }
+
+      if (addedVideoIds.has(videoId)) {
+        videoStatus.textContent = "Это видео уже добавлено.";
+        videoUrlInput.removeAttribute("aria-invalid");
+        return;
+      }
+
+      const card = document.createElement("article");
+      card.className = "video-card";
+
+      const frameContainer = document.createElement("div");
+      frameContainer.className = "video-frame";
+
+      const frame = document.createElement("iframe");
+      frame.src = `https://www.youtube-nocookie.com/embed/${videoId}`;
+      frame.title = "Видео YouTube";
+      frame.loading = "lazy";
+      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+      frame.allowFullscreen = true;
+
+      const caption = document.createElement("p");
+      caption.textContent = "Видео с YouTube";
+
+      frameContainer.append(frame);
+      card.append(frameContainer, caption);
+      videoList.prepend(card);
+      addedVideoIds.add(videoId);
+      videoForm.reset();
+      videoUrlInput.removeAttribute("aria-invalid");
+      videoStatus.textContent = "Видео добавлено.";
+    });
+
+    videoUrlInput.addEventListener("input", () => {
+      videoUrlInput.removeAttribute("aria-invalid");
+      videoStatus.textContent = "";
+    });
+  </script>
 </body>
 </html>
