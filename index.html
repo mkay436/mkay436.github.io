@@ -256,6 +256,115 @@
       color: #fff;
     }
 
+    .photos-section {
+      margin-top: 36px;
+    }
+
+    .photos-section h2 {
+      margin: 0 0 16px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(24px, 4vw, 32px);
+    }
+
+    .photo-form {
+      display: flex;
+      gap: 12px;
+      padding: 18px;
+      border: 1px solid #f2b84b26;
+      border-radius: 8px;
+      background: #1b191b;
+    }
+
+    .photo-form label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      clip-path: inset(50%);
+    }
+
+    .photo-form input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid #ffffff24;
+      border-radius: 5px;
+      outline: none;
+      background: #111114;
+      color: #f5f2ed;
+      font: inherit;
+    }
+
+    .photo-form input:focus {
+      border-color: #d3a84f;
+      box-shadow: 0 0 0 3px #d3a84f26;
+    }
+
+    .photo-form button {
+      padding: 12px 18px;
+      border: 1px solid #d3a84f;
+      border-radius: 5px;
+      background: #d3a84f;
+      color: #171411;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .photo-form button:hover {
+      background: #f2b84b;
+    }
+
+    .photo-hint,
+    .photo-status {
+      margin: 10px 2px 0;
+      color: #aaa5a0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .photo-status:not(:empty) {
+      color: #f0c66c;
+    }
+
+    .photo-hint a {
+      color: #d3a84f;
+    }
+
+    .photo-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 280px));
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .photo-card {
+      overflow: hidden;
+      border: 1px solid #f2b84b26;
+      border-radius: 8px;
+      background: #1b191b;
+    }
+
+    .photo-card img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      background: #09090a;
+    }
+
+    .photo-card .photo-error {
+      display: grid;
+      min-height: 140px;
+      padding: 18px;
+      place-items: center;
+      color: #f0aaa0;
+      font-size: 14px;
+      text-align: center;
+    }
+
     @media (max-width: 600px) {
       main {
         width: min(100% - 32px, 1528px);
@@ -268,7 +377,8 @@
         font-size: 13px;
       }
 
-      .video-form {
+      .video-form,
+      .photo-form {
         flex-direction: column;
       }
     }
@@ -315,9 +425,30 @@
         >
         <button type="submit">Добавить видео</button>
       </form>
-      <p class="video-hint" id="video-hint">Принимаются ссылки youtube.com и youtu.be. Другие сайты не поддерживаются.</p>
+      <p class="video-hint" id="video-hint">Принимаются ссылки youtube.com и youtu.be. Для встроенного плеера откройте сайт через HTTPS, например на GitHub Pages: из локального файла YouTube не разрешает воспроизведение.</p>
       <p class="video-status" id="video-status" role="status" aria-live="polite"></p>
       <div class="video-list" id="video-list" aria-label="Добавленные видео"></div>
+    </section>
+
+    <section class="photos-section" aria-labelledby="photos-title">
+      <h2 id="photos-title">Фотографии объединения</h2>
+      <form class="photo-form" id="photo-form">
+        <label for="photo-url">Прямая ссылка на фотографию с Postimages</label>
+        <input
+          id="photo-url"
+          name="photoUrl"
+          type="url"
+          inputmode="url"
+          autocomplete="url"
+          placeholder="Вставьте прямую ссылку на изображение"
+          aria-describedby="photo-hint photo-status"
+          required
+        >
+        <button type="submit">Добавить фото</button>
+      </form>
+      <p class="photo-hint" id="photo-hint">Загрузите фото на <a href="https://postimages.org/" target="_blank" rel="noopener noreferrer">Postimages</a> и вставьте прямую ссылку на файл изображения (обычно начинается с i.postimg.cc). Ссылка на страницу Postimages не подойдёт.</p>
+      <p class="photo-status" id="photo-status" role="status" aria-live="polite"></p>
+      <div class="photo-list" id="photo-list" aria-label="Добавленные фотографии"></div>
     </section>
   </main>
   <script>
@@ -327,6 +458,12 @@
     const videoList = document.querySelector("#video-list");
     const addedVideoIds = new Set();
     const videoStorageKey = "hollywood-gang-youtube-videos";
+    const photoForm = document.querySelector("#photo-form");
+    const photoUrlInput = document.querySelector("#photo-url");
+    const photoStatus = document.querySelector("#photo-status");
+    const photoList = document.querySelector("#photo-list");
+    const addedPhotoUrls = new Set();
+    const photoStorageKey = "hollywood-gang-postimages-photos";
 
     function saveVideoIds(videoIds) {
       try {
@@ -357,6 +494,58 @@
         videoStatus.textContent = "Не удалось загрузить сохраненные видео. Проверьте настройки хранилища браузера.";
         return [];
       }
+    }
+
+    function savePhotoUrls(photoUrls) {
+      try {
+        localStorage.setItem(photoStorageKey, JSON.stringify(photoUrls));
+        return true;
+      } catch (error) {
+        console.error("Не удалось сохранить список фотографий в браузере.", error);
+        photoStatus.textContent = "Не удалось сохранить фотографию в этом браузере. Проверьте настройки хранилища.";
+        return false;
+      }
+    }
+
+    function loadPhotoUrls() {
+      try {
+        const savedPhotos = localStorage.getItem(photoStorageKey);
+        if (savedPhotos === null) return [];
+
+        const parsedPhotos = JSON.parse(savedPhotos);
+        if (!Array.isArray(parsedPhotos)) {
+          throw new TypeError("Сохраненный список фотографий должен быть массивом.");
+        }
+
+        return [...new Set(parsedPhotos.filter(
+          (photoUrl) => typeof photoUrl === "string" && getPostimagesUrl(photoUrl) !== null
+        ))];
+      } catch (error) {
+        console.error("Не удалось загрузить сохраненный список фотографий.", error);
+        photoStatus.textContent = "Не удалось загрузить сохраненные фотографии. Проверьте настройки хранилища браузера.";
+        return [];
+      }
+    }
+
+    function getPostimagesUrl(value) {
+      let url;
+
+      try {
+        url = new URL(value.trim());
+      } catch {
+        return null;
+      }
+
+      const path = url.pathname.toLowerCase();
+      const isDirectPostimagesImage =
+        url.protocol === "https:" &&
+        url.hostname.toLowerCase() === "i.postimg.cc" &&
+        !url.username &&
+        !url.password &&
+        !url.port &&
+        /\.(avif|gif|jpe?g|png|webp)$/.test(path);
+
+      return isDirectPostimagesImage ? url.href : null;
     }
 
     function getYouTubeVideoId(value) {
@@ -414,7 +603,7 @@
       frame.src = `https://www.youtube-nocookie.com/embed/${videoId}`;
       frame.title = "Видео YouTube";
       frame.loading = "lazy";
-      frame.referrerPolicy = "strict-origin-when-cross-origin";
+      frame.referrerPolicy = "origin";
       frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
       frame.allowFullscreen = true;
 
@@ -441,6 +630,48 @@
       frameContainer.append(frame);
       footer.append(caption, deleteButton);
       card.append(frameContainer, footer);
+      return card;
+    }
+
+    function createPhotoCard(photoUrl) {
+      const card = document.createElement("article");
+      card.className = "photo-card";
+
+      const image = document.createElement("img");
+      image.src = photoUrl;
+      image.alt = "Фотография объединения Hollywood Gang";
+      image.loading = "lazy";
+      image.referrerPolicy = "no-referrer";
+      image.addEventListener("error", () => {
+        const errorMessage = document.createElement("p");
+        errorMessage.className = "photo-error";
+        errorMessage.textContent = "Не удалось загрузить фото. Проверьте прямую ссылку на изображение.";
+        image.replaceWith(errorMessage);
+        photoStatus.textContent = "Одно из фото не загрузилось. Проверьте ссылку Postimages.";
+      }, { once: true });
+
+      const footer = document.createElement("div");
+      footer.className = "video-card-footer";
+
+      const caption = document.createElement("p");
+      caption.textContent = "Фото с Postimages";
+
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "video-delete";
+      deleteButton.type = "button";
+      deleteButton.textContent = "Удалить";
+      deleteButton.setAttribute("aria-label", "Удалить фотографию Postimages");
+      deleteButton.addEventListener("click", () => {
+        const remainingPhotoUrls = [...addedPhotoUrls].filter((savedUrl) => savedUrl !== photoUrl);
+        if (!savePhotoUrls(remainingPhotoUrls)) return;
+
+        card.remove();
+        addedPhotoUrls.delete(photoUrl);
+        photoStatus.textContent = "Фотография удалена.";
+      });
+
+      footer.append(caption, deleteButton);
+      card.append(image, footer);
       return card;
     }
 
@@ -475,9 +706,44 @@
       videoStatus.textContent = "";
     });
 
+    photoForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const photoUrl = getPostimagesUrl(photoUrlInput.value);
+
+      if (!photoUrl) {
+        photoStatus.textContent = "Не удалось добавить фото. Вставьте прямую HTTPS-ссылку на файл с i.postimg.cc (JPG, PNG, GIF, WEBP или AVIF).";
+        photoUrlInput.setAttribute("aria-invalid", "true");
+        return;
+      }
+
+      if (addedPhotoUrls.has(photoUrl)) {
+        photoStatus.textContent = "Эта фотография уже добавлена.";
+        photoUrlInput.removeAttribute("aria-invalid");
+        return;
+      }
+
+      if (!savePhotoUrls([...addedPhotoUrls, photoUrl])) return;
+
+      addedPhotoUrls.add(photoUrl);
+      photoList.prepend(createPhotoCard(photoUrl));
+      photoForm.reset();
+      photoUrlInput.removeAttribute("aria-invalid");
+      photoStatus.textContent = "Фотография добавлена.";
+    });
+
+    photoUrlInput.addEventListener("input", () => {
+      photoUrlInput.removeAttribute("aria-invalid");
+      photoStatus.textContent = "";
+    });
+
     for (const videoId of loadVideoIds()) {
       addedVideoIds.add(videoId);
       videoList.prepend(createVideoCard(videoId));
+    }
+
+    for (const photoUrl of loadPhotoUrls()) {
+      addedPhotoUrls.add(photoUrl);
+      photoList.prepend(createPhotoCard(photoUrl));
     }
   </script>
 </body>
