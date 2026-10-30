@@ -31,6 +31,138 @@
       padding: 28px 0 64px;
     }
 
+    main[hidden],
+    .access-screen[hidden] {
+      display: none;
+    }
+
+    .access-screen {
+      position: fixed;
+      z-index: 10;
+      inset: 0;
+      display: grid;
+      padding: 24px;
+      place-items: center;
+      background: #111114ed;
+      backdrop-filter: blur(8px);
+    }
+
+    .access-card {
+      width: min(100%, 420px);
+      padding: clamp(24px, 5vw, 36px);
+      border: 1px solid #f2b84b40;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #222022, #191719);
+      box-shadow: 0 18px 60px #0008;
+    }
+
+    .access-card h1 {
+      margin: 0 0 20px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(28px, 6vw, 36px);
+    }
+
+    .access-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .access-form label {
+      color: #e6dfd5;
+      font-size: 14px;
+    }
+
+    .access-form input {
+      width: 100%;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid #ffffff24;
+      border-radius: 5px;
+      outline: none;
+      background: #111114;
+      color: #f5f2ed;
+      font: inherit;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .access-form input:focus {
+      border-color: #d3a84f;
+      box-shadow: 0 0 0 3px #d3a84f26;
+    }
+
+    .access-form button {
+      padding: 12px 18px;
+      border: 1px solid #d3a84f;
+      border-radius: 5px;
+      background: #d3a84f;
+      color: #171411;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .access-form button:hover {
+      background: #f2b84b;
+    }
+
+    .access-guest {
+      padding: 8px 0;
+      border: 0;
+      background: transparent;
+      color: #88858a;
+      font: inherit;
+      font-size: 13px;
+      text-align: left;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      cursor: pointer;
+    }
+
+    .access-guest:hover {
+      color: #c4c0c5;
+    }
+
+    .access-status {
+      min-height: 1.5em;
+      margin: 12px 0 0;
+      color: #f0aaa0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .site-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+    }
+
+    .access-logout {
+      padding: 9px 14px;
+      border: 1px solid #d3a84f;
+      border-radius: 5px;
+      background: transparent;
+      color: #d3a84f;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .access-logout:hover {
+      background: #d3a84f;
+      color: #171411;
+    }
+
+    .guest-view .video-form,
+    .guest-view .video-hint,
+    .guest-view .video-status,
+    .guest-view .photo-form,
+    .guest-view .photo-hint,
+    .guest-view .photo-status,
+    .guest-view .video-delete {
+      display: none;
+    }
+
     .breadcrumbs {
       display: flex;
       flex-wrap: wrap;
@@ -385,7 +517,34 @@
   </style>
 </head>
 <body>
-  <main>
+  <section class="access-screen" id="access-screen" role="dialog" aria-modal="true" aria-labelledby="access-title">
+    <div class="access-card">
+      <h1 id="access-title">Введите код.</h1>
+      <form class="access-form" id="access-form">
+        <label for="access-code">Код доступа</label>
+        <input
+          id="access-code"
+          name="accessCode"
+          type="text"
+          autocomplete="one-time-code"
+          autocapitalize="characters"
+          spellcheck="false"
+          minlength="20"
+          maxlength="20"
+          aria-describedby="access-status"
+          required
+          autofocus
+        >
+        <button type="submit">Войти</button>
+        <button class="access-guest" id="access-guest" type="button">У меня нет кода. Я буду смотреть.</button>
+      </form>
+      <p class="access-status" id="access-status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
+  <main hidden>
+    <div class="site-toolbar">
+      <button class="access-logout" id="access-logout" type="button">Выйти</button>
+    </div>
     <nav class="breadcrumbs" aria-label="Навигационная цепочка">
       <a href="#">Главная</a>
       <span class="separator" aria-hidden="true">›</span>
@@ -452,6 +611,109 @@
     </section>
   </main>
   <script>
+    const accessCodeHashes = new Set([
+      "eb1c68a22921a81de63e52ef5dd79e42e6cd36ea1b40ae9bb5a595b8f055bfd4",
+      "e632f39c680ded7032f20b17df465f7ce19629c94c164f32c007e3b87ab673aa",
+      "00337c4847b1c62c652c8c2316cd4d9901e4fb501d4e40b9658aa99e00fbf8b2",
+      "e30ce39423c040ebb471f89f370a3f00067c90a49f945d489786aabe06b44075",
+      "4d56b06afbed1500efd15a3ff99dea0aa1400c0cbbd49df96cbb3aeb63a044a0",
+      "78e0db50488852bc7c9beffc482c40b56d9a0b849c1bbf73e2ec29e4b7b08327",
+      "cc2ccf6aa80c1143a7499abb3bbac9ebc633559150ef5bfae5cb7d7e6f970fe5",
+      "7686ede2ac250638f2c371820778823e0e5ea48ea45906a8d99f46f898cd0dbd"
+    ]);
+    const accessSessionKey = "hollywood-gang-access-granted";
+    const accessScreen = document.querySelector("#access-screen");
+    const accessForm = document.querySelector("#access-form");
+    const accessCodeInput = document.querySelector("#access-code");
+    const accessStatus = document.querySelector("#access-status");
+    const siteContent = document.querySelector("main");
+    const accessLogoutButton = document.querySelector("#access-logout");
+    const accessGuestButton = document.querySelector("#access-guest");
+
+    function unlockSite(mode = "owner") {
+      siteContent.classList.toggle("guest-view", mode === "guest");
+      accessScreen.hidden = true;
+      siteContent.hidden = false;
+    }
+
+    try {
+      const savedAccessMode = sessionStorage.getItem(accessSessionKey);
+      if (savedAccessMode === "true" || savedAccessMode === "guest") {
+        unlockSite(savedAccessMode === "guest" ? "guest" : "owner");
+      } else {
+        accessCodeInput.focus();
+      }
+    } catch (error) {
+      console.error("Не удалось проверить сессию доступа.", error);
+      accessStatus.textContent = "Не удалось открыть хранилище браузера. Разрешите его и обновите страницу.";
+    }
+
+    accessForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const code = accessCodeInput.value.trim().toUpperCase();
+
+      if (!/^[A-HJ-NP-Z2-9]{20}$/.test(code)) {
+        accessStatus.textContent = "Неверный код. Проверьте ввод и попробуйте ещё раз.";
+        accessCodeInput.setAttribute("aria-invalid", "true");
+        return;
+      }
+
+      try {
+        const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(code));
+        const codeHash = Array.from(
+          new Uint8Array(digest),
+          (byte) => byte.toString(16).padStart(2, "0")
+        ).join("");
+
+        if (!accessCodeHashes.has(codeHash)) {
+          accessStatus.textContent = "Неверный код. Проверьте ввод и попробуйте ещё раз.";
+          accessCodeInput.setAttribute("aria-invalid", "true");
+          accessCodeInput.select();
+          return;
+        }
+
+        sessionStorage.setItem(accessSessionKey, "true");
+        unlockSite("owner");
+      } catch (error) {
+        console.error("Не удалось проверить код доступа.", error);
+        accessStatus.textContent = "Не удалось проверить код. Обновите страницу и попробуйте ещё раз.";
+      }
+    });
+
+    accessGuestButton.addEventListener("click", () => {
+      try {
+        sessionStorage.setItem(accessSessionKey, "guest");
+        unlockSite("guest");
+      } catch (error) {
+        console.error("Не удалось открыть гостевой режим.", error);
+        accessStatus.textContent = "Не удалось открыть гостевой режим. Проверьте настройки хранилища браузера.";
+      }
+    });
+
+    accessCodeInput.addEventListener("input", () => {
+      accessCodeInput.removeAttribute("aria-invalid");
+      accessStatus.textContent = "";
+    });
+
+    accessLogoutButton.addEventListener("click", () => {
+      let logoutError = null;
+      try {
+        sessionStorage.removeItem(accessSessionKey);
+      } catch (error) {
+        logoutError = error;
+        console.error("Не удалось завершить сессию доступа.", error);
+      }
+
+      siteContent.hidden = true;
+      accessScreen.hidden = false;
+      accessForm.reset();
+      accessCodeInput.removeAttribute("aria-invalid");
+      accessStatus.textContent = logoutError
+        ? "Сайт закрыт, но не удалось очистить сессию. Проверьте настройки хранилища браузера."
+        : "";
+      accessCodeInput.focus();
+    });
+
     const videoForm = document.querySelector("#video-form");
     const videoUrlInput = document.querySelector("#video-url");
     const videoStatus = document.querySelector("#video-status");
