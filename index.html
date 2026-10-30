@@ -1154,7 +1154,7 @@
           <button id="photo-paste-add" type="button" disabled>Добавить вставленное фото</button>
           <button class="photo-paste-cancel" id="photo-paste-cancel" type="button" hidden>Отменить</button>
         </div>
-        <p class="photo-paste-hint" id="photo-paste-hint">Поддерживаются изображения PNG, JPG, GIF, WEBP и AVIF размером до 20 МБ. Фото из буфера сохраняется в этом браузере на этом устройстве.</p>
+        <p class="photo-paste-hint" id="photo-paste-hint">Поддерживаются изображения PNG, JPG, GIF, WEBP и AVIF размером до 20 МБ. Фото загружается в общее хранилище сайта.</p>
         <p class="photo-paste-hint" id="photo-paste-status" role="status" aria-live="polite"></p>
       </div>
       <form class="photo-form" id="photo-form">
@@ -1190,6 +1190,7 @@
       <img class="photo-viewer-image" id="photo-viewer-image" alt="">
     </div>
   </section>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     const accessCodeHashes = new Set([
       "eb1c68a22921a81de63e52ef5dd79e42e6cd36ea1b40ae9bb5a595b8f055bfd4",
@@ -1592,7 +1593,19 @@
     const photoPasteCancelButton = document.querySelector("#photo-paste-cancel");
     const photoPasteStatus = document.querySelector("#photo-paste-status");
     const addedPhotoUrls = new Set();
+    const sharedPhotos = new Map();
     const photoStorageKey = "hollywood-gang-postimages-photos";
+    const sharedPhotoTable = "photos";
+    const sharedPhotoBucket = "hollywood-photos";
+    const supabaseUrl = "https://plelpuyfyvlujrgjcjkw.supabase.co";
+    const supabasePublishableKey = "sb_publishable_UC7sx7ATshXGLZRbx061Vw_3JWCQB0T";
+    const supabaseClient = window.supabase?.createClient(supabaseUrl, supabasePublishableKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false
+      }
+    }) || null;
     const pastedPhotoDatabaseName = "hollywood-gang-pasted-photos";
     const pastedPhotoStoreName = "photos";
     const pastedPhotoObjectUrls = new Map();
@@ -1606,6 +1619,7 @@
     ]);
     let pendingPastedPhoto = null;
     let pastedPhotoDatabasePromise = null;
+    let sharedPhotoUserId = null;
     const photoViewer = document.querySelector("#photo-viewer");
     const photoViewerImage = document.querySelector("#photo-viewer-image");
     const photoViewerScale = document.querySelector("#photo-viewer-scale");
@@ -1648,17 +1662,6 @@
       }
     }
 
-    function savePhotoUrls(photoUrls) {
-      try {
-        localStorage.setItem(photoStorageKey, JSON.stringify(photoUrls));
-        return true;
-      } catch (error) {
-        console.error("Не удалось сохранить список фотографий в браузере.", error);
-        photoStatus.textContent = "Не удалось сохранить фотографию в этом браузере. Проверьте настройки хранилища.";
-        return false;
-      }
-    }
-
     function loadPhotoUrls() {
       try {
         const savedPhotos = localStorage.getItem(photoStorageKey);
@@ -1677,6 +1680,132 @@
         photoStatus.textContent = "Не удалось загрузить сохраненные фотографии. Проверьте настройки хранилища браузера.";
         return [];
       }
+    }
+
+    async function ensureSharedPhotoUser() {
+      if (!supabaseClient) {
+        throw new Error("Не удалось загрузить клиент Supabase. Проверьте подключение к интернету.");
+      }
+
+      let { data: { session }, error } = await supabaseClient.auth.getSession();
+      if (error) throw error;
+
+      if (!session) {
+        const result = await supabaseClient.auth.signInAnonymously();
+        if (result.error) throw result.error;
+        session = result.data.session;
+      }
+
+      if (!session?.user?.id) {
+        throw new Error("Supabase не создал пользовательскую сессию. Включите анонимный вход в настройках Auth.");
+      }
+
+      sharedPhotoUserId = session.user.id;
+      return session.user.id;
+    }
+
+    async function loadSharedPhotoRecords() {
+      await ensureSharedPhotoUser();
+      const { data, error } = await supabaseClient
+        .from(sharedPhotoTable)
+        .select("id, owner_id, image_url, storage_path, created_at")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      return data;
+    }
+
+    function getSharedPhotoUrl(record) {
+      if (record.image_url) return record.image_url;
+
+      const { data } = supabaseClient.storage
+        .from(sharedPhotoBucket)
+        .getPublicUrl(record.storage_path);
+      return data.publicUrl;
+    }
+
+    async function saveSharedPhotoRecord(photo) {
+      const ownerId = await ensureSharedPhotoUser();
+      const { data, error } = await supabaseClient
+        .from(sharedPhotoTable)
+        .insert({ ...photo, owner_id: ownerId })
+        .select("id, owner_id, image_url, storage_path, created_at")
+        .single();
+
+      if (error) throw error;
+      return data;
+    }
+
+    async function uploadSharedPhoto(blob, stableId = crypto.randomUUID()) {
+      const ownerId = await ensureSharedPhotoUser();
+      const extensionByType = {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/gif": "gif",
+        "image/webp": "webp",
+        "image/avif": "avif"
+      };
+      const extension = extensionByType[blob.type];
+      if (!extension || blob.size > maxPastedPhotoBytes) {
+        throw new Error("Формат или размер фотографии не поддерживается.");
+      }
+
+      const storagePath = `${ownerId}/${stableId}.${extension}`;
+      const storage = supabaseClient.storage.from(sharedPhotoBucket);
+      const { error: uploadError } = await storage.upload(storagePath, blob, {
+        contentType: blob.type,
+        cacheControl: "31536000",
+        upsert: true
+      });
+
+      if (uploadError) throw uploadError;
+
+      try {
+        return await saveSharedPhotoRecord({ image_url: null, storage_path: storagePath });
+      } catch (error) {
+        if (error.code === "23505") {
+          const { data: existingRecord, error: lookupError } = await supabaseClient
+            .from(sharedPhotoTable)
+            .select("id, owner_id, image_url, storage_path, created_at")
+            .eq("storage_path", storagePath)
+            .maybeSingle();
+          if (!lookupError && existingRecord) return existingRecord;
+        }
+
+        const { error: cleanupError } = await storage.remove([storagePath]);
+        if (cleanupError) {
+          console.error("Не удалось очистить файл после ошибки сохранения записи.", cleanupError);
+        }
+        throw error;
+      }
+    }
+
+    async function deleteSharedPhoto(record) {
+      const userId = await ensureSharedPhotoUser();
+      if (record.owner_id !== userId) {
+        throw new Error("Удалять можно только фотографии, добавленные в этом браузере.");
+      }
+
+      const { error } = await supabaseClient
+        .from(sharedPhotoTable)
+        .delete()
+        .eq("id", record.id)
+        .eq("owner_id", userId);
+
+      if (error) throw error;
+
+      if (record.storage_path) {
+        const { error: storageError } = await supabaseClient.storage
+          .from(sharedPhotoBucket)
+          .remove([record.storage_path]);
+        if (storageError) {
+          console.error("Фотография удалена из списка, но файл не удалось удалить из хранилища.", storageError);
+          photoStatus.textContent = "Фото удалено из списка, но не удалось очистить файл в хранилище.";
+          return;
+        }
+      }
+
+      photoStatus.textContent = "Фотография удалена.";
     }
 
     function openPastedPhotoDatabase() {
@@ -1865,7 +1994,9 @@
       return card;
     }
 
-    function createPhotoCard(photoUrl, captionText = "Фото с Postimages", pastedPhotoId = null) {
+    function createPhotoCard(photo, captionText = null, pastedPhotoId = null) {
+      const photoRecord = typeof photo === "string" ? null : photo;
+      const photoUrl = photoRecord ? getSharedPhotoUrl(photoRecord) : photo;
       const card = document.createElement("article");
       card.className = "photo-card";
 
@@ -1884,7 +2015,7 @@
       image.addEventListener("error", () => {
         const errorMessage = document.createElement("span");
         errorMessage.className = "photo-error";
-        errorMessage.textContent = "Не удалось загрузить фото. Проверьте прямую ссылку на изображение.";
+        errorMessage.textContent = "Не удалось загрузить фото. Проверьте ссылку или доступность хранилища.";
         previewButton.disabled = true;
         image.replaceWith(errorMessage);
         photoStatus.textContent = "Одно из фото не загрузилось. Проверьте ссылку Postimages.";
@@ -1894,7 +2025,7 @@
       footer.className = "video-card-footer";
 
       const caption = document.createElement("p");
-      caption.textContent = captionText;
+      caption.textContent = captionText || (photoRecord?.storage_path ? "Фото из мессенджера" : "Фото с Postimages");
 
       const downloadButton = document.createElement("button");
       downloadButton.className = "photo-download";
@@ -1909,6 +2040,21 @@
       deleteButton.textContent = "Удалить";
       deleteButton.setAttribute("aria-label", "Удалить фотографию");
       deleteButton.addEventListener("click", async () => {
+        if (photoRecord) {
+          deleteButton.disabled = true;
+          try {
+            await deleteSharedPhoto(photoRecord);
+            card.remove();
+            sharedPhotos.delete(photoRecord.id);
+            if (photoRecord.image_url) addedPhotoUrls.delete(photoRecord.image_url);
+          } catch (error) {
+            console.error("Не удалось удалить общую фотографию.", error);
+            photoStatus.textContent = `Не удалось удалить фото: ${error.message}`;
+            deleteButton.disabled = false;
+          }
+          return;
+        }
+
         if (pastedPhotoId) {
           try {
             await deletePastedPhoto(pastedPhotoId);
@@ -1924,15 +2070,22 @@
           return;
         }
 
-        const remainingPhotoUrls = [...addedPhotoUrls].filter((savedUrl) => savedUrl !== photoUrl);
-        if (!savePhotoUrls(remainingPhotoUrls)) return;
-
-        card.remove();
-        addedPhotoUrls.delete(photoUrl);
-        photoStatus.textContent = "Фотография удалена.";
+        try {
+          const remainingPhotoUrls = loadPhotoUrls().filter((savedUrl) => savedUrl !== photoUrl);
+          localStorage.setItem(photoStorageKey, JSON.stringify(remainingPhotoUrls));
+          card.remove();
+          addedPhotoUrls.delete(photoUrl);
+          photoStatus.textContent = "Локальная фотография удалена.";
+        } catch (error) {
+          console.error("Не удалось удалить локальную фотографию.", error);
+          photoStatus.textContent = "Не удалось удалить локальную фотографию из браузера.";
+        }
       });
 
-      footer.append(caption, downloadButton, deleteButton);
+      footer.append(caption, downloadButton);
+      if (!photoRecord || photoRecord.owner_id === sharedPhotoUserId) {
+        footer.append(deleteButton);
+      }
       card.append(previewButton, footer);
       return card;
     }
@@ -1994,17 +2147,18 @@
       if (!pendingPastedPhoto) return;
 
       photoPasteAddButton.disabled = true;
-      photoPasteStatus.textContent = "Сохраняю фотографию в этом браузере…";
+      photoPasteStatus.textContent = "Загружаю фотографию в общее хранилище…";
       try {
-        const record = await savePastedPhoto(pendingPastedPhoto.blob);
-        displayPastedPhoto(record);
+        const record = await uploadSharedPhoto(pendingPastedPhoto.blob);
+        sharedPhotos.set(record.id, record);
+        photoList.prepend(createPhotoCard(record));
         clearPendingPastedPhoto();
         photoPasteInput.value = "";
-        photoPasteStatus.textContent = "Фотография добавлена и сохранена в этом браузере.";
+        photoPasteStatus.textContent = "Фотография добавлена и доступна всем посетителям сайта.";
       } catch (error) {
-        console.error("Не удалось сохранить вставленную фотографию.", error);
+        console.error("Не удалось загрузить фотографию в общее хранилище.", error);
         photoPasteAddButton.disabled = false;
-        photoPasteStatus.textContent = "Не удалось сохранить фото. Возможно, не хватает места в хранилище браузера.";
+        photoPasteStatus.textContent = `Не удалось загрузить фото в общее хранилище: ${error.message}`;
       }
     });
 
@@ -2119,6 +2273,117 @@
       }
     });
 
+    function showSharedPhoto(record) {
+      if (sharedPhotos.has(record.id)) return;
+      sharedPhotos.set(record.id, record);
+      if (record.image_url) addedPhotoUrls.add(record.image_url);
+      photoList.prepend(createPhotoCard(record));
+    }
+
+    async function initializeSharedPhotos() {
+      const legacyPhotoUrls = loadPhotoUrls();
+      let legacyPastedPhotos = [];
+
+      try {
+        const records = await loadSharedPhotoRecords();
+        records.forEach(showSharedPhoto);
+
+        const sharedUrls = new Set(
+          [...sharedPhotos.values()]
+            .map((record) => record.image_url)
+            .filter(Boolean)
+        );
+        for (const photoUrl of legacyPhotoUrls) {
+          if (sharedUrls.has(photoUrl)) continue;
+
+          try {
+            const record = await saveSharedPhotoRecord({ image_url: photoUrl, storage_path: null });
+            showSharedPhoto(record);
+            sharedUrls.add(photoUrl);
+          } catch (error) {
+            if (error.code !== "23505") throw error;
+            const refreshedRecords = await loadSharedPhotoRecords();
+            refreshedRecords.forEach(showSharedPhoto);
+            sharedUrls.add(photoUrl);
+          }
+        }
+        localStorage.removeItem(photoStorageKey);
+
+        legacyPastedPhotos = await loadPastedPhotos();
+        const sharedPaths = new Set(
+          [...sharedPhotos.values()]
+            .map((record) => record.storage_path)
+            .filter(Boolean)
+        );
+        const extensionByType = {
+          "image/png": "png",
+          "image/jpeg": "jpg",
+          "image/gif": "gif",
+          "image/webp": "webp",
+          "image/avif": "avif"
+        };
+
+        for (const record of legacyPastedPhotos) {
+          const extension = extensionByType[record.blob.type];
+          const storagePath = `${sharedPhotoUserId}/${record.id}.${extension}`;
+          if (sharedPaths.has(storagePath)) {
+            await deletePastedPhoto(record.id);
+            continue;
+          }
+
+          try {
+            const uploadedRecord = await uploadSharedPhoto(record.blob, record.id);
+            showSharedPhoto(uploadedRecord);
+            sharedPaths.add(storagePath);
+          } catch (error) {
+            console.error("Не удалось перенести локальную фотографию в общее хранилище.", error);
+            displayPastedPhoto(record);
+            photoPasteStatus.textContent = `Не удалось перенести старую фотографию в общее хранилище: ${error.message}`;
+            continue;
+          }
+
+          try {
+            await deletePastedPhoto(record.id);
+          } catch (error) {
+            console.error("Общее фото загружено, но локальную копию удалить не удалось.", error);
+            photoPasteStatus.textContent = "Фото уже перенесено в общее хранилище, но старая локальная копия осталась на этом устройстве.";
+          }
+        }
+      } catch (error) {
+        console.error("Не удалось загрузить общие фотографии.", error);
+        photoStatus.textContent = `Общее хранилище фотографий недоступно: ${error.message}`;
+
+        for (const photoUrl of legacyPhotoUrls) {
+          if (addedPhotoUrls.has(photoUrl)) continue;
+          addedPhotoUrls.add(photoUrl);
+          photoList.append(createPhotoCard(photoUrl));
+        }
+
+        if (legacyPastedPhotos.length === 0) {
+          try {
+            legacyPastedPhotos = await loadPastedPhotos();
+          } catch (storageError) {
+            console.error("Не удалось прочитать локальные фотографии.", storageError);
+            photoPasteStatus.textContent = "Не удалось прочитать старые фотографии из этого браузера.";
+          }
+        }
+        const extensionByType = {
+          "image/png": "png",
+          "image/jpeg": "jpg",
+          "image/gif": "gif",
+          "image/webp": "webp",
+          "image/avif": "avif"
+        };
+        legacyPastedPhotos.forEach((record) => {
+          const suffix = `/${record.id}.${extensionByType[record.blob.type]}`;
+          const alreadyShared = [...sharedPhotos.values()].some(
+            (photo) => photo.storage_path?.endsWith(suffix)
+          );
+          if (!alreadyShared && !pastedPhotoObjectUrls.has(record.id)) displayPastedPhoto(record);
+        });
+      }
+    }
+
     videoForm.addEventListener("submit", (event) => {
       event.preventDefault();
       const videoId = getYouTubeVideoId(videoUrlInput.value);
@@ -2150,7 +2415,7 @@
       videoStatus.textContent = "";
     });
 
-    photoForm.addEventListener("submit", (event) => {
+    photoForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const photoUrl = getPostimagesUrl(photoUrlInput.value);
 
@@ -2166,13 +2431,21 @@
         return;
       }
 
-      if (!savePhotoUrls([...addedPhotoUrls, photoUrl])) return;
-
-      addedPhotoUrls.add(photoUrl);
-      photoList.prepend(createPhotoCard(photoUrl));
-      photoForm.reset();
-      photoUrlInput.removeAttribute("aria-invalid");
-      photoStatus.textContent = "Фотография добавлена.";
+      const submitButton = photoForm.querySelector('button[type="submit"]');
+      submitButton.disabled = true;
+      photoStatus.textContent = "Добавляю фотографию в общее хранилище…";
+      try {
+        const record = await saveSharedPhotoRecord({ image_url: photoUrl, storage_path: null });
+        showSharedPhoto(record);
+        photoForm.reset();
+        photoUrlInput.removeAttribute("aria-invalid");
+        photoStatus.textContent = "Фотография добавлена и доступна всем посетителям сайта.";
+      } catch (error) {
+        console.error("Не удалось добавить фотографию в общее хранилище.", error);
+        photoStatus.textContent = `Не удалось добавить фото: ${error.message}`;
+      } finally {
+        submitButton.disabled = false;
+      }
     });
 
     photoUrlInput.addEventListener("input", () => {
@@ -2185,17 +2458,7 @@
       videoList.prepend(createVideoCard(videoId));
     }
 
-    for (const photoUrl of loadPhotoUrls()) {
-      addedPhotoUrls.add(photoUrl);
-      photoList.prepend(createPhotoCard(photoUrl));
-    }
-
-    loadPastedPhotos()
-      .then((records) => records.forEach(displayPastedPhoto))
-      .catch((error) => {
-        console.error("Не удалось загрузить фотографии из локального хранилища.", error);
-        photoPasteStatus.textContent = "Не удалось загрузить фотографии из этого браузера.";
-      });
+    initializeSharedPhotos();
   </script>
 </body>
 </html>
