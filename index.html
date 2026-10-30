@@ -1994,7 +1994,7 @@
       return card;
     }
 
-    function createPhotoCard(photo, captionText = null, pastedPhotoId = null) {
+    function createPhotoCard(photo, pastedPhotoId = null) {
       const photoRecord = typeof photo === "string" ? null : photo;
       const photoUrl = photoRecord ? getSharedPhotoUrl(photoRecord) : photo;
       const card = document.createElement("article");
@@ -2023,9 +2023,6 @@
 
       const footer = document.createElement("div");
       footer.className = "video-card-footer";
-
-      const caption = document.createElement("p");
-      caption.textContent = captionText || (photoRecord?.storage_path ? "Фото из мессенджера" : "Фото с Postimages");
 
       const downloadButton = document.createElement("button");
       downloadButton.className = "photo-download";
@@ -2082,7 +2079,7 @@
         }
       });
 
-      footer.append(caption, downloadButton);
+      footer.append(downloadButton);
       if (!photoRecord || photoRecord.owner_id === sharedPhotoUserId) {
         footer.append(deleteButton);
       }
@@ -2093,7 +2090,7 @@
     function displayPastedPhoto(record) {
       const objectUrl = URL.createObjectURL(record.blob);
       pastedPhotoObjectUrls.set(record.id, objectUrl);
-      photoList.prepend(createPhotoCard(objectUrl, "Фото из буфера обмена", record.id));
+      photoList.prepend(createPhotoCard(objectUrl, record.id));
     }
 
     function setPendingPastedPhoto(file) {
