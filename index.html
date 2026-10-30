@@ -100,6 +100,11 @@
       box-shadow: 0 0 0 3px #43b96f26;
     }
 
+    .access-form input:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
     .access-form button {
       padding: 12px 18px;
       border: 1px solid #43b96f;
@@ -113,6 +118,11 @@
 
     .access-form button:hover {
       background: #58d982;
+    }
+
+    .access-form button:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
     }
 
     .access-guest {
@@ -542,6 +552,7 @@
           autofocus
         >
         <button type="submit">Продолжить</button>
+        <button class="access-guest" id="access-guest-name" type="button">У меня нет кода. Я буду смотреть.</button>
       </form>
       <form class="access-form" id="access-form" hidden>
         <label for="access-code">Код доступа</label>
@@ -645,11 +656,6 @@
       "cc2ccf6aa80c1143a7499abb3bbac9ebc633559150ef5bfae5cb7d7e6f970fe5",
       "7686ede2ac250638f2c371820778823e0e5ea48ea45906a8d99f46f898cd0dbd"
     ]);
-    const universalCodeHashes = new Set([
-      "eb1c68a22921a81de63e52ef5dd79e42e6cd36ea1b40ae9bb5a595b8f055bfd4",
-      "e632f39c680ded7032f20b17df465f7ce19629c94c164f32c007e3b87ab673aa",
-      "00337c4847b1c62c652c8c2316cd4d9901e4fb501d4e40b9658aa99e00fbf8b2"
-    ]);
     const namedCodeHashes = new Map([
       ["Артем", "e30ce39423c040ebb471f89f370a3f00067c90a49f945d489786aabe06b44075"],
       ["Сахар", "4d56b06afbed1500efd15a3ff99dea0aa1400c0cbbd49df96cbb3aeb63a044a0"],
@@ -659,9 +665,13 @@
       ["Привеликий Алексей", "4d56b06afbed1500efd15a3ff99dea0aa1400c0cbbd49df96cbb3aeb63a044a0"]
     ]);
     const accessSessionKey = "hollywood-gang-access-granted";
+    const nameAttemptStorageKey = "hollywood-gang-name-attempts";
+    const nameAttemptLimit = 3;
+    const nameCooldownDuration = 30 * 60 * 1000;
     const accessScreen = document.querySelector("#access-screen");
     const accessNameForm = document.querySelector("#access-name-form");
     const accessNameInput = document.querySelector("#access-name");
+    const accessNameSubmit = accessNameForm.querySelector('button[type="submit"]');
     const accessForm = document.querySelector("#access-form");
     const accessCodeInput = document.querySelector("#access-code");
     const accessStatus = document.querySelector("#access-status");
@@ -669,8 +679,93 @@
     const siteContent = document.querySelector("main");
     const accessLogoutButton = document.querySelector("#access-logout");
     const accessBackButton = document.querySelector("#access-back");
+    const accessGuestNameButton = document.querySelector("#access-guest-name");
     const accessGuestButton = document.querySelector("#access-guest");
     let enteredName = "";
+    let nameCooldownTimer = null;
+
+    function readNameAttemptState() {
+      try {
+        const savedState = localStorage.getItem(nameAttemptStorageKey);
+        if (savedState === null) return { failedAttempts: 0, lockedUntil: 0 };
+
+        const state = JSON.parse(savedState);
+        if (
+          !state ||
+          !Number.isInteger(state.failedAttempts) ||
+          state.failedAttempts < 0 ||
+          state.failedAttempts > nameAttemptLimit ||
+          !Number.isFinite(state.lockedUntil) ||
+          state.lockedUntil < 0
+        ) {
+          throw new TypeError("Сохраненный счетчик попыток ввода имени некорректен.");
+        }
+
+        if (state.lockedUntil > Date.now() || state.lockedUntil === 0) return state;
+        localStorage.removeItem(nameAttemptStorageKey);
+        return { failedAttempts: 0, lockedUntil: 0 };
+      } catch (error) {
+        console.error("Не удалось прочитать состояние попыток ввода имени.", error);
+        accessNameInput.disabled = true;
+        accessNameSubmit.disabled = true;
+        accessStatus.textContent = "Не удалось проверить попытки входа. Проверьте настройки хранилища браузера.";
+        return null;
+      }
+    }
+
+    function updateNameCooldown() {
+      const state = readNameAttemptState();
+      if (!state) return;
+
+      if (state.lockedUntil > Date.now()) {
+        accessNameInput.disabled = true;
+        accessNameSubmit.disabled = true;
+        const remainingSeconds = Math.ceil((state.lockedUntil - Date.now()) / 1000);
+        const remainingMinutes = Math.floor(remainingSeconds / 60);
+        const seconds = String(remainingSeconds % 60).padStart(2, "0");
+        accessStatus.textContent = `Попытки закончились. Попробуйте снова через ${remainingMinutes}:${seconds}.`;
+        return;
+      }
+
+      accessNameInput.disabled = false;
+      accessNameSubmit.disabled = false;
+      if (nameCooldownTimer !== null) {
+        window.clearInterval(nameCooldownTimer);
+        nameCooldownTimer = null;
+      }
+      if (accessStatus.textContent.startsWith("Попытки закончились.")) {
+        accessStatus.textContent = "Можно попробовать снова.";
+      }
+    }
+
+    function startNameCooldownTimer() {
+      if (nameCooldownTimer === null) {
+        nameCooldownTimer = window.setInterval(updateNameCooldown, 1000);
+      }
+      updateNameCooldown();
+    }
+
+    function saveNameAttemptState(state) {
+      try {
+        localStorage.setItem(nameAttemptStorageKey, JSON.stringify(state));
+        return true;
+      } catch (error) {
+        console.error("Не удалось сохранить состояние попыток ввода имени.", error);
+        accessStatus.textContent = "Не удалось сохранить попытку. Проверьте настройки хранилища браузера.";
+        return false;
+      }
+    }
+
+    function resetNameAttemptState() {
+      try {
+        localStorage.removeItem(nameAttemptStorageKey);
+        return true;
+      } catch (error) {
+        console.error("Не удалось сбросить состояние попыток ввода имени.", error);
+        accessStatus.textContent = "Не удалось сбросить попытки входа. Проверьте настройки хранилища браузера.";
+        return false;
+      }
+    }
 
     function unlockSite(mode = "owner") {
       siteContent.classList.toggle("guest-view", mode === "guest");
@@ -684,6 +779,8 @@
         unlockSite(savedAccessMode === "guest" ? "guest" : "owner");
       } else {
         accessNameInput.focus();
+        const state = readNameAttemptState();
+        if (state?.lockedUntil > Date.now()) startNameCooldownTimer();
       }
     } catch (error) {
       console.error("Не удалось проверить сессию доступа.", error);
@@ -692,7 +789,31 @@
 
     accessNameForm.addEventListener("submit", (event) => {
       event.preventDefault();
+      const state = readNameAttemptState();
+      if (!state) return;
+      if (state.lockedUntil > Date.now()) {
+        startNameCooldownTimer();
+        return;
+      }
+
       enteredName = accessNameInput.value;
+      if (!namedCodeHashes.has(enteredName)) {
+        const failedAttempts = state.failedAttempts + 1;
+        const lockedUntil = failedAttempts >= nameAttemptLimit
+          ? Date.now() + nameCooldownDuration
+          : 0;
+        if (!saveNameAttemptState({ failedAttempts, lockedUntil })) return;
+
+        if (lockedUntil > 0) {
+          startNameCooldownTimer();
+        } else {
+          const attemptsLeft = nameAttemptLimit - failedAttempts;
+          accessStatus.textContent = `Такого имени нет. Осталось попыток: ${attemptsLeft}.`;
+        }
+        return;
+      }
+
+      if (!resetNameAttemptState()) return;
       accessNameForm.hidden = true;
       accessForm.hidden = false;
       accessTitle.textContent = "Введите код.";
@@ -718,11 +839,7 @@
         ).join("");
 
         const requiredCodeHash = namedCodeHashes.get(enteredName);
-        const isAllowedCode = requiredCodeHash
-          ? codeHash === requiredCodeHash
-          : universalCodeHashes.has(codeHash);
-
-        if (!accessCodeHashes.has(codeHash) || !isAllowedCode) {
+        if (!accessCodeHashes.has(codeHash) || codeHash !== requiredCodeHash) {
           accessStatus.textContent = "Неверный код. Проверьте ввод и попробуйте ещё раз.";
           accessCodeInput.setAttribute("aria-invalid", "true");
           accessCodeInput.select();
@@ -748,7 +865,7 @@
       accessNameInput.focus();
     });
 
-    accessGuestButton.addEventListener("click", () => {
+    function enterGuestMode() {
       try {
         sessionStorage.setItem(accessSessionKey, "guest");
         unlockSite("guest");
@@ -756,11 +873,18 @@
         console.error("Не удалось открыть гостевой режим.", error);
         accessStatus.textContent = "Не удалось открыть гостевой режим. Проверьте настройки хранилища браузера.";
       }
-    });
+    }
+
+    accessGuestNameButton.addEventListener("click", enterGuestMode);
+    accessGuestButton.addEventListener("click", enterGuestMode);
 
     accessCodeInput.addEventListener("input", () => {
       accessCodeInput.removeAttribute("aria-invalid");
       accessStatus.textContent = "";
+    });
+
+    accessNameInput.addEventListener("input", () => {
+      if (!accessNameInput.disabled) accessStatus.textContent = "";
     });
 
     accessLogoutButton.addEventListener("click", () => {
@@ -785,7 +909,7 @@
       accessStatus.textContent = logoutError
         ? "Сайт закрыт, но не удалось очистить сессию. Проверьте настройки хранилища браузера."
         : "";
-      accessCodeInput.focus();
+      updateNameCooldown();
     });
 
     const videoForm = document.querySelector("#video-form");
