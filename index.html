@@ -41,6 +41,7 @@
       z-index: 10;
       inset: 0;
       display: grid;
+      overflow-y: auto;
       padding: 24px;
       place-items: center;
       background: #111114ed;
@@ -54,6 +55,11 @@
       border-radius: 8px;
       background: linear-gradient(135deg, #202420, #171c18);
       box-shadow: 0 18px 60px #0008;
+      margin: auto;
+    }
+
+    .access-card.upgrader-card {
+      width: min(100%, 1120px);
     }
 
     .access-card h1 {
@@ -140,6 +146,221 @@
 
     .access-guest:hover {
       color: #c4c0c5;
+    }
+
+    .upgrader-panel[hidden] {
+      display: none;
+    }
+
+    .upgrader-header {
+      margin-bottom: 24px;
+      color: #f5f2ed;
+      font-size: clamp(22px, 4vw, 30px);
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-align: center;
+    }
+
+    .upgrader-header span {
+      color: #58d982;
+    }
+
+    .upgrader-choices {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .upgrader-choice {
+      display: grid;
+      min-width: 0;
+      gap: 8px;
+      justify-items: center;
+      padding: 10px;
+      border: 1px solid #ffffff18;
+      border-radius: 8px;
+      background: #191d19;
+      color: #e6dfd5;
+      font: inherit;
+      cursor: pointer;
+      transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+    }
+
+    .upgrader-choice:hover {
+      transform: translateY(-2px);
+      border-color: #43b96f90;
+    }
+
+    .upgrader-choice[aria-pressed="true"] {
+      border-color: #58d982;
+      background: #43b96f18;
+      box-shadow: 0 0 0 2px #43b96f26;
+    }
+
+    .upgrader-choice:disabled {
+      cursor: default;
+      opacity: 0.7;
+    }
+
+    .upgrader-choice img {
+      width: 100%;
+      height: 100px;
+      border-radius: 5px;
+      background: #101310;
+      object-fit: cover;
+      object-position: center 35%;
+    }
+
+    .upgrader-choice span {
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .upgrader-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(200px, 0.9fr) minmax(0, 1fr);
+      align-items: center;
+      gap: clamp(12px, 3vw, 32px);
+    }
+
+    .upgrader-item {
+      display: grid;
+      min-height: 210px;
+      padding: 18px;
+      justify-items: center;
+      align-content: center;
+      gap: 12px;
+      border: 1px solid #ffffff12;
+      border-radius: 8px;
+      background: radial-gradient(ellipse at center, #43b96f12, transparent 70%), #191d19;
+      text-align: center;
+    }
+
+    .upgrader-item-label {
+      color: #aaa5a0;
+      font-size: 13px;
+    }
+
+    .upgrader-item-art {
+      display: grid;
+      width: 100px;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid #43b96f50;
+      border-radius: 12px;
+      background: linear-gradient(145deg, #43b96f24, #111114);
+      color: #58d982;
+      font-size: 46px;
+      text-shadow: 0 0 24px #58d98280;
+    }
+
+    .upgrader-item-art img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 11px;
+      object-fit: cover;
+      object-position: center 35%;
+    }
+
+    .upgrader-wheel {
+      position: relative;
+      display: grid;
+      width: min(100%, 220px);
+      margin: 0 auto;
+      aspect-ratio: 1;
+      padding: 18px;
+      place-items: center;
+      border: 5px solid #43b96f;
+      border-radius: 50%;
+      background: conic-gradient(from 180deg, #a95045 0deg, #f0c66c 120deg, #43b96f 230deg, #a95045 360deg);
+      box-shadow: 0 0 28px #43b96f24, inset 0 0 0 8px #111114;
+      transition: transform 1600ms cubic-bezier(.12,.72,.18,1);
+    }
+
+    .upgrader-wheel::before {
+      position: absolute;
+      top: -17px;
+      left: calc(50% - 10px);
+      width: 0;
+      height: 0;
+      border-right: 10px solid transparent;
+      border-bottom: 19px solid #f5f2ed;
+      border-left: 10px solid transparent;
+      content: "";
+      z-index: 1;
+    }
+
+    .upgrader-wheel-center {
+      display: grid;
+      width: 70%;
+      aspect-ratio: 1;
+      place-items: center;
+      border: 1px solid #ffffff12;
+      border-radius: 50%;
+      background: #171a18;
+      color: #58d982;
+      font-size: 34px;
+      font-weight: 800;
+    }
+
+    .upgrader-chance,
+    .upgrader-result {
+      margin: 16px 0 0;
+      color: #aaa5a0;
+      font-size: 14px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .upgrader-result[data-result="win"] {
+      color: #7de39b;
+    }
+
+    .upgrader-result[data-result="loss"] {
+      color: #f0aaa0;
+    }
+
+    .upgrader-actions {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .upgrader-actions button {
+      padding: 12px 24px;
+      border: 1px solid #43b96f;
+      border-radius: 5px;
+      background: #43b96f;
+      color: #101712;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .upgrader-actions button:hover {
+      background: #58d982;
+    }
+
+    .upgrader-actions button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .upgrader-actions button[hidden] {
+      display: none;
+    }
+
+    .upgrader-actions .upgrader-continue {
+      border-color: #ffffff30;
+      background: transparent;
+      color: #e6dfd5;
+    }
+
+    .upgrader-actions .upgrader-continue:hover {
+      background: #ffffff12;
     }
 
     .access-status {
@@ -532,6 +753,30 @@
       .photo-form {
         flex-direction: column;
       }
+
+      .upgrader-layout {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .upgrader-choices {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .upgrader-wheel {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        width: min(52vw, 180px);
+      }
+
+      .upgrader-item {
+        min-height: 150px;
+        padding: 12px;
+      }
+
+      .upgrader-item-art {
+        width: 72px;
+        font-size: 34px;
+      }
     }
   </style>
 </head>
@@ -574,6 +819,54 @@
         <button class="access-guest" id="access-guest" type="button">У меня нет кода. Я буду смотреть.</button>
       </form>
       <p class="access-status" id="access-status" role="status" aria-live="polite"></p>
+      <section class="upgrader-panel" id="upgrader-panel" aria-labelledby="upgrader-title" hidden>
+        <h2 class="upgrader-header" id="upgrader-title"><span>⌃</span> UPGRADER</h2>
+        <p class="upgrader-chance">Выберите предмет для бесплатной прокрутки</p>
+        <div class="upgrader-choices" id="upgrader-choices" role="group" aria-label="Предмет для улучшения">
+          <button class="upgrader-choice" type="button" data-item-index="0" aria-pressed="false">
+            <img src="assets/upgrader/item-1.png" alt="">
+            <span>Предмет 1</span>
+          </button>
+          <button class="upgrader-choice" type="button" data-item-index="1" aria-pressed="false">
+            <img src="assets/upgrader/item-2.png" alt="">
+            <span>Предмет 2</span>
+          </button>
+          <button class="upgrader-choice" type="button" data-item-index="2" aria-pressed="false">
+            <img src="assets/upgrader/item-3.png" alt="">
+            <span>Предмет 3</span>
+          </button>
+          <button class="upgrader-choice" type="button" data-item-index="3" aria-pressed="false">
+            <img src="assets/upgrader/item-4.png" alt="">
+            <span>Предмет 4</span>
+          </button>
+        </div>
+        <div class="upgrader-layout">
+          <div class="upgrader-item">
+            <span class="upgrader-item-label">Ваш предмет</span>
+            <span class="upgrader-item-art" id="upgrader-source-art" aria-hidden="true">?</span>
+            <strong id="upgrader-source-name">Выберите предмет</strong>
+          </div>
+          <div
+            class="upgrader-wheel"
+            id="upgrader-wheel"
+            role="img"
+            aria-label="Рулетка шанса улучшения"
+          >
+            <span class="upgrader-wheel-center" aria-hidden="true">⌃</span>
+          </div>
+          <div class="upgrader-item">
+            <span class="upgrader-item-label">Предмет после улучшения</span>
+            <span class="upgrader-item-art" id="upgrader-target-art" aria-hidden="true">?</span>
+            <strong id="upgrader-target-name">Пока не выбран</strong>
+          </div>
+        </div>
+        <p class="upgrader-chance">Шанс улучшения: 35% · попытка бесплатная, предмет не теряется</p>
+        <div class="upgrader-actions">
+          <button id="upgrader-play" type="button" disabled>⌃ Улучшить</button>
+          <button class="upgrader-continue" id="upgrader-continue" type="button" hidden>Продолжить</button>
+        </div>
+        <p class="upgrader-result" id="upgrader-result" role="status" aria-live="polite"></p>
+      </section>
     </div>
   </section>
   <main hidden>
@@ -666,7 +959,6 @@
     ]);
     const accessSessionKey = "hollywood-gang-access-granted";
     const nameAttemptStorageKey = "hollywood-gang-name-attempts";
-    const nameAttemptLimit = 3;
     const nameCooldownDuration = 30 * 60 * 1000;
     const accessScreen = document.querySelector("#access-screen");
     const accessNameForm = document.querySelector("#access-name-form");
@@ -681,34 +973,56 @@
     const accessBackButton = document.querySelector("#access-back");
     const accessGuestNameButton = document.querySelector("#access-guest-name");
     const accessGuestButton = document.querySelector("#access-guest");
+    const accessCard = document.querySelector(".access-card");
+    const upgraderPanel = document.querySelector("#upgrader-panel");
+    const upgraderWheel = document.querySelector("#upgrader-wheel");
+    const upgraderChoices = document.querySelector("#upgrader-choices");
+    const upgraderChoiceButtons = [...upgraderChoices.querySelectorAll("[data-item-index]")];
+    const upgraderSourceArt = document.querySelector("#upgrader-source-art");
+    const upgraderSourceName = document.querySelector("#upgrader-source-name");
+    const upgraderTargetArt = document.querySelector("#upgrader-target-art");
+    const upgraderTargetName = document.querySelector("#upgrader-target-name");
+    const upgraderPlayButton = document.querySelector("#upgrader-play");
+    const upgraderContinueButton = document.querySelector("#upgrader-continue");
+    const upgraderResult = document.querySelector("#upgrader-result");
     let enteredName = "";
     let nameCooldownTimer = null;
+    let upgraderResolved = false;
+    let upgraderWon = false;
+    let selectedUpgraderItemIndex = null;
+
+    const upgraderItems = [
+      { name: "Предмет 1", image: "assets/upgrader/item-1.png" },
+      { name: "Предмет 2", image: "assets/upgrader/item-2.png" },
+      { name: "Предмет 3", image: "assets/upgrader/item-3.png" },
+      { name: "Предмет 4", image: "assets/upgrader/item-4.png" }
+    ];
+
+    function renderUpgraderItem(container, item) {
+      const image = document.createElement("img");
+      image.src = item.image;
+      image.alt = item.name;
+      container.replaceChildren(image);
+    }
 
     function readNameAttemptState() {
       try {
         const savedState = localStorage.getItem(nameAttemptStorageKey);
-        if (savedState === null) return { failedAttempts: 0, lockedUntil: 0 };
+        if (savedState === null) return { lockedUntil: 0 };
 
         const state = JSON.parse(savedState);
-        if (
-          !state ||
-          !Number.isInteger(state.failedAttempts) ||
-          state.failedAttempts < 0 ||
-          state.failedAttempts > nameAttemptLimit ||
-          !Number.isFinite(state.lockedUntil) ||
-          state.lockedUntil < 0
-        ) {
-          throw new TypeError("Сохраненный счетчик попыток ввода имени некорректен.");
+        if (!state || !Number.isFinite(state.lockedUntil) || state.lockedUntil < 0) {
+          throw new TypeError("Сохраненное состояние перерыва некорректно.");
         }
 
-        if (state.lockedUntil > Date.now() || state.lockedUntil === 0) return state;
+        if (state.lockedUntil > Date.now()) return { lockedUntil: state.lockedUntil };
         localStorage.removeItem(nameAttemptStorageKey);
-        return { failedAttempts: 0, lockedUntil: 0 };
+        return { lockedUntil: 0 };
       } catch (error) {
-        console.error("Не удалось прочитать состояние попыток ввода имени.", error);
+        console.error("Не удалось прочитать состояние перерыва.", error);
         accessNameInput.disabled = true;
         accessNameSubmit.disabled = true;
-        accessStatus.textContent = "Не удалось проверить попытки входа. Проверьте настройки хранилища браузера.";
+        accessStatus.textContent = "Не удалось проверить перерыв. Проверьте настройки хранилища браузера.";
         return null;
       }
     }
@@ -723,7 +1037,7 @@
         const remainingSeconds = Math.ceil((state.lockedUntil - Date.now()) / 1000);
         const remainingMinutes = Math.floor(remainingSeconds / 60);
         const seconds = String(remainingSeconds % 60).padStart(2, "0");
-        accessStatus.textContent = `Попытки закончились. Попробуйте снова через ${remainingMinutes}:${seconds}.`;
+        accessStatus.textContent = `Неудача. Попробуйте снова через ${remainingMinutes}:${seconds}.`;
         return;
       }
 
@@ -733,8 +1047,8 @@
         window.clearInterval(nameCooldownTimer);
         nameCooldownTimer = null;
       }
-      if (accessStatus.textContent.startsWith("Попытки закончились.")) {
-        accessStatus.textContent = "Можно попробовать снова.";
+      if (accessStatus.textContent.startsWith("Неудача.")) {
+        accessStatus.textContent = "Перерыв окончен. Можно попробовать снова.";
       }
     }
 
@@ -750,21 +1064,66 @@
         localStorage.setItem(nameAttemptStorageKey, JSON.stringify(state));
         return true;
       } catch (error) {
-        console.error("Не удалось сохранить состояние попыток ввода имени.", error);
-        accessStatus.textContent = "Не удалось сохранить попытку. Проверьте настройки хранилища браузера.";
+        console.error("Не удалось сохранить состояние перерыва.", error);
+        upgraderResult.dataset.result = "loss";
+        upgraderResult.textContent = "Не удалось сохранить перерыв. Разрешите хранилище браузера и попробуйте снова.";
         return false;
       }
     }
 
-    function resetNameAttemptState() {
-      try {
-        localStorage.removeItem(nameAttemptStorageKey);
-        return true;
-      } catch (error) {
-        console.error("Не удалось сбросить состояние попыток ввода имени.", error);
-        accessStatus.textContent = "Не удалось сбросить попытки входа. Проверьте настройки хранилища браузера.";
-        return false;
+    function showUpgrader(message) {
+      upgraderResolved = false;
+      upgraderWon = false;
+      selectedUpgraderItemIndex = null;
+      accessTitle.hidden = true;
+      accessNameForm.hidden = true;
+      accessForm.hidden = true;
+      accessStatus.hidden = true;
+      upgraderPanel.hidden = false;
+      accessCard.classList.add("upgrader-card");
+      upgraderWheel.style.transform = "rotate(0deg)";
+      upgraderResult.textContent = message;
+      upgraderResult.removeAttribute("data-result");
+      upgraderContinueButton.hidden = true;
+      upgraderPlayButton.hidden = false;
+      upgraderPlayButton.disabled = true;
+      upgraderChoiceButtons.forEach((button) => {
+        button.disabled = false;
+        button.setAttribute("aria-pressed", "false");
+      });
+      upgraderSourceArt.textContent = "?";
+      upgraderSourceName.textContent = "Выберите предмет";
+      upgraderTargetArt.textContent = "?";
+      upgraderTargetName.textContent = "Пока не выбран";
+      upgraderChoices.querySelector(".upgrader-choice:not(:disabled)")?.focus();
+    }
+
+    function returnFromUpgrader() {
+      upgraderPanel.hidden = true;
+      accessCard.classList.remove("upgrader-card");
+      accessTitle.hidden = false;
+      accessStatus.hidden = false;
+      accessNameForm.hidden = false;
+      accessForm.hidden = true;
+      accessTitle.textContent = "Как тебя зовут?";
+      enteredName = "";
+      accessNameInput.value = "";
+      accessCodeInput.value = "";
+      accessCodeInput.removeAttribute("aria-invalid");
+
+      if (upgraderWon) {
+        accessStatus.textContent = "Вы выиграли одну новую попытку входа.";
+      } else {
+        accessStatus.textContent = "";
+        const state = readNameAttemptState();
+        if (state?.lockedUntil > Date.now()) {
+          startNameCooldownTimer();
+        } else {
+          updateNameCooldown();
+        }
       }
+
+      if (!accessNameInput.disabled) accessNameInput.focus();
     }
 
     function unlockSite(mode = "owner") {
@@ -798,22 +1157,10 @@
 
       enteredName = accessNameInput.value;
       if (!namedCodeHashes.has(enteredName)) {
-        const failedAttempts = state.failedAttempts + 1;
-        const lockedUntil = failedAttempts >= nameAttemptLimit
-          ? Date.now() + nameCooldownDuration
-          : 0;
-        if (!saveNameAttemptState({ failedAttempts, lockedUntil })) return;
-
-        if (lockedUntil > 0) {
-          startNameCooldownTimer();
-        } else {
-          const attemptsLeft = nameAttemptLimit - failedAttempts;
-          accessStatus.textContent = `Такого имени нет. Осталось попыток: ${attemptsLeft}.`;
-        }
+        showUpgrader("Такого имени нет. Попробуй удачу в Upgrader.");
         return;
       }
 
-      if (!resetNameAttemptState()) return;
       accessNameForm.hidden = true;
       accessForm.hidden = false;
       accessTitle.textContent = "Введите код.";
@@ -821,13 +1168,32 @@
       accessCodeInput.focus();
     });
 
+    upgraderChoices.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-item-index]");
+      if (!button || upgraderResolved) return;
+
+      selectedUpgraderItemIndex = Number(button.dataset.itemIndex);
+      const selectedItem = upgraderItems[selectedUpgraderItemIndex];
+      if (!selectedItem) return;
+
+      upgraderChoiceButtons.forEach((choice) => {
+        choice.setAttribute("aria-pressed", String(choice === button));
+      });
+      renderUpgraderItem(upgraderSourceArt, selectedItem);
+      upgraderSourceName.textContent = selectedItem.name;
+      upgraderTargetArt.textContent = "?";
+      upgraderTargetName.textContent = "Пока не выбран";
+      upgraderPlayButton.disabled = false;
+      upgraderResult.textContent = "";
+      upgraderResult.removeAttribute("data-result");
+    });
+
     accessForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const code = accessCodeInput.value.trim().toUpperCase();
 
       if (!/^[A-HJ-NP-Z2-9]{20}$/.test(code)) {
-        accessStatus.textContent = "Неверный код. Проверьте ввод и попробуйте ещё раз.";
-        accessCodeInput.setAttribute("aria-invalid", "true");
+        showUpgrader("Код не подходит. Попробуй удачу в Upgrader.");
         return;
       }
 
@@ -840,9 +1206,7 @@
 
         const requiredCodeHash = namedCodeHashes.get(enteredName);
         if (!accessCodeHashes.has(codeHash) || codeHash !== requiredCodeHash) {
-          accessStatus.textContent = "Неверный код. Проверьте ввод и попробуйте ещё раз.";
-          accessCodeInput.setAttribute("aria-invalid", "true");
-          accessCodeInput.select();
+          showUpgrader("Код не подходит. Попробуй удачу в Upgrader.");
           return;
         }
 
@@ -853,6 +1217,49 @@
         accessStatus.textContent = "Не удалось проверить код. Обновите страницу и попробуйте ещё раз.";
       }
     });
+
+    upgraderPlayButton.addEventListener("click", async () => {
+      if (upgraderResolved || selectedUpgraderItemIndex === null) return;
+
+      upgraderResolved = true;
+      upgraderPlayButton.disabled = true;
+      upgraderChoiceButtons.forEach((button) => {
+        button.disabled = true;
+      });
+      upgraderWheel.style.transform = `rotate(${1800 + Math.floor(Math.random() * 360)}deg)`;
+      await new Promise((resolve) => window.setTimeout(resolve, 1700));
+
+      upgraderWon = Math.random() < 0.35;
+      upgraderPlayButton.hidden = true;
+      upgraderContinueButton.hidden = false;
+
+      if (upgraderWon) {
+        const possibleTargetIndexes = upgraderItems
+          .map((item, index) => index)
+          .filter((index) => index !== selectedUpgraderItemIndex);
+        const targetIndex = possibleTargetIndexes[Math.floor(Math.random() * possibleTargetIndexes.length)];
+        renderUpgraderItem(upgraderTargetArt, upgraderItems[targetIndex]);
+        upgraderTargetName.textContent = upgraderItems[targetIndex].name;
+        upgraderResult.dataset.result = "win";
+        upgraderResult.textContent = "Улучшение удалось! Вы получили одну новую попытку входа.";
+      } else {
+        upgraderTargetArt.textContent = "×";
+        upgraderTargetName.textContent = "Улучшение не удалось";
+        const lockedUntil = Date.now() + nameCooldownDuration;
+        if (!saveNameAttemptState({ lockedUntil })) {
+          upgraderResolved = false;
+          upgraderResult.dataset.result = "loss";
+          upgraderPlayButton.hidden = true;
+          upgraderContinueButton.hidden = true;
+          return;
+        }
+
+        upgraderResult.dataset.result = "loss";
+        upgraderResult.textContent = "Неудача. Следующая попытка будет доступна через 30 минут.";
+      }
+    });
+
+    upgraderContinueButton.addEventListener("click", returnFromUpgrader);
 
     accessBackButton.addEventListener("click", () => {
       enteredName = "";
@@ -902,6 +1309,10 @@
       accessNameInput.value = "";
       accessNameForm.hidden = false;
       accessForm.hidden = true;
+      upgraderPanel.hidden = true;
+      accessCard.classList.remove("upgrader-card");
+      accessTitle.hidden = false;
+      accessStatus.hidden = false;
       accessTitle.textContent = "Как тебя зовут?";
       accessForm.reset();
       accessNameInput.focus();
