@@ -96,14 +96,15 @@
       text-transform: uppercase;
     }
 
-    #access-name {
-      letter-spacing: normal;
-      text-transform: none;
-    }
-
     .access-form input:focus {
       border-color: #43b96f;
       box-shadow: 0 0 0 3px #43b96f26;
+    }
+
+    #auth-email,
+    #auth-password {
+      letter-spacing: normal;
+      text-transform: none;
     }
 
     .access-form input:disabled {
@@ -1008,90 +1009,33 @@
 <body>
   <section class="access-screen" id="access-screen" role="dialog" aria-modal="true" aria-labelledby="access-title">
     <div class="access-card">
-      <h1 id="access-title">Как тебя зовут?</h1>
-      <form class="access-form" id="access-name-form">
-        <label for="access-name">Имя</label>
+      <h1 id="access-title">Регистрация</h1>
+      <form class="access-form" id="auth-form">
+        <label for="auth-email">Электронная почта</label>
         <input
-          id="access-name"
-          name="name"
-          type="text"
-          autocomplete="name"
-          maxlength="80"
+          id="auth-email"
+          name="email"
+          type="email"
+          autocomplete="email"
           aria-describedby="access-status"
           required
           autofocus
         >
-        <button type="submit">Продолжить</button>
-        <button class="access-guest" id="access-guest-name" type="button">У меня нет кода. Я буду смотреть.</button>
-      </form>
-      <form class="access-form" id="access-form" hidden>
-        <label for="access-code">Код доступа</label>
+        <label for="auth-password">Пароль</label>
         <input
-          id="access-code"
-          name="accessCode"
-          type="text"
-          autocomplete="one-time-code"
-          autocapitalize="characters"
-          spellcheck="false"
-          minlength="20"
-          maxlength="20"
+          id="auth-password"
+          name="password"
+          type="password"
+          autocomplete="new-password"
+          minlength="8"
           aria-describedby="access-status"
           required
-          autofocus
         >
-        <button type="submit">Войти</button>
-        <button class="access-guest" id="access-back" type="button">Назад</button>
-        <button class="access-guest" id="access-guest" type="button">У меня нет кода. Я буду смотреть.</button>
+        <button type="submit" id="auth-submit">Создать аккаунт</button>
+        <button class="access-guest" type="button" id="auth-toggle">Уже есть аккаунт? Войти</button>
+        <button class="access-guest" type="button" id="auth-guest">Продолжить без аккаунта</button>
       </form>
       <p class="access-status" id="access-status" role="status" aria-live="polite"></p>
-      <section class="upgrader-panel" id="upgrader-panel" aria-labelledby="upgrader-title" hidden>
-        <h2 class="upgrader-header" id="upgrader-title"><span>⌃</span> UPGRADER</h2>
-        <p class="upgrader-chance">Выберите предмет для бесплатной прокрутки</p>
-        <div class="upgrader-choices" id="upgrader-choices" role="group" aria-label="Предмет для улучшения">
-          <button class="upgrader-choice" type="button" data-item-index="0" aria-pressed="false">
-            <img src="assets/upgrader/item-1.png" alt="">
-            <span>Предмет 1</span>
-          </button>
-          <button class="upgrader-choice" type="button" data-item-index="1" aria-pressed="false">
-            <img src="assets/upgrader/item-2.png" alt="">
-            <span>Предмет 2</span>
-          </button>
-          <button class="upgrader-choice" type="button" data-item-index="2" aria-pressed="false">
-            <img src="assets/upgrader/item-3.png" alt="">
-            <span>Предмет 3</span>
-          </button>
-          <button class="upgrader-choice" type="button" data-item-index="3" aria-pressed="false">
-            <img src="assets/upgrader/item-4.png" alt="">
-            <span>Предмет 4</span>
-          </button>
-        </div>
-        <div class="upgrader-layout">
-          <div class="upgrader-item">
-            <span class="upgrader-item-label">Ваш предмет</span>
-            <span class="upgrader-item-art" id="upgrader-source-art" aria-hidden="true">?</span>
-            <strong id="upgrader-source-name">Выберите предмет</strong>
-          </div>
-          <div
-            class="upgrader-wheel"
-            id="upgrader-wheel"
-            role="img"
-            aria-label="Рулетка шанса улучшения"
-          >
-            <span class="upgrader-wheel-center" aria-hidden="true">⌃</span>
-          </div>
-          <div class="upgrader-item">
-            <span class="upgrader-item-label">Предмет после улучшения</span>
-            <span class="upgrader-item-art" id="upgrader-target-art" aria-hidden="true">?</span>
-            <strong id="upgrader-target-name">Пока не выбран</strong>
-          </div>
-        </div>
-        <p class="upgrader-chance">Шанс улучшения: 35% · попытка бесплатная, предмет не теряется</p>
-        <div class="upgrader-actions">
-          <button id="upgrader-play" type="button" disabled>⌃ Улучшить</button>
-          <button class="upgrader-continue" id="upgrader-continue" type="button" hidden>Продолжить</button>
-        </div>
-        <p class="upgrader-result" id="upgrader-result" role="status" aria-live="polite"></p>
-      </section>
     </div>
   </section>
   <main hidden>
@@ -1192,6 +1136,177 @@
   </section>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    const supabaseUrl = "https://plelpuyfyvlujrgjcjkw.supabase.co";
+    const supabasePublishableKey = "sb_publishable_UC7sx7ATshXGLZRbx061Vw_3JWCQB0T";
+    const supabaseClient = window.supabase?.createClient(supabaseUrl, supabasePublishableKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false
+      }
+    }) || null;
+
+    const accessScreen = document.querySelector("#access-screen");
+    const authForm = document.querySelector("#auth-form");
+    const authEmailInput = document.querySelector("#auth-email");
+    const authPasswordInput = document.querySelector("#auth-password");
+    const authSubmitButton = document.querySelector("#auth-submit");
+    const authToggleButton = document.querySelector("#auth-toggle");
+    const authGuestButton = document.querySelector("#auth-guest");
+    const accessStatus = document.querySelector("#access-status");
+    const accessTitle = document.querySelector("#access-title");
+    const siteContent = document.querySelector("main");
+    const accessLogoutButton = document.querySelector("#access-logout");
+    let authMode = "register";
+    let guestMode = false;
+
+    function unlockSite(mode) {
+      guestMode = mode === "guest";
+      siteContent.classList.toggle("guest-view", guestMode);
+      accessScreen.hidden = true;
+      siteContent.hidden = false;
+    }
+
+    function setAuthMode(mode) {
+      authMode = mode;
+      const registering = mode === "register";
+      accessTitle.textContent = registering ? "Регистрация" : "Вход";
+      authSubmitButton.textContent = registering ? "Создать аккаунт" : "Войти";
+      authToggleButton.textContent = registering
+        ? "Уже есть аккаунт? Войти"
+        : "Нет аккаунта? Зарегистрироваться";
+      authPasswordInput.autocomplete = registering ? "new-password" : "current-password";
+      accessStatus.textContent = "";
+      authPasswordInput.value = "";
+      authEmailInput.focus();
+    }
+
+    function getAuthRedirectUrl() {
+      if (window.location.protocol !== "http:" && window.location.protocol !== "https:") return undefined;
+      return window.location.href;
+    }
+
+    async function initializeAccess() {
+      if (!supabaseClient) {
+        accessStatus.textContent = "Не удалось подключиться к Supabase. Проверьте интернет и обновите страницу.";
+        accessScreen.hidden = false;
+        return;
+      }
+
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
+
+        if (data.session && !data.session.user.is_anonymous) {
+          unlockSite("owner");
+        } else {
+          if (!data.session && sharedPhotoUserPromise) {
+            await sharedPhotoUserPromise.catch(() => null);
+          }
+          accessScreen.hidden = false;
+          authEmailInput.focus();
+        }
+      } catch (error) {
+        console.error("Не удалось проверить сессию Supabase.", error);
+        accessScreen.hidden = false;
+        accessStatus.textContent = `Не удалось проверить вход: ${error.message}`;
+      }
+    }
+
+    authForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!supabaseClient) {
+        accessStatus.textContent = "Сервис регистрации недоступен. Проверьте подключение к интернету.";
+        return;
+      }
+
+      const email = authEmailInput.value.trim();
+      const password = authPasswordInput.value;
+      authSubmitButton.disabled = true;
+      authStatusMessage("Связываюсь с Supabase…");
+
+      try {
+        if (authMode === "register") {
+          let { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+          if (sessionError) throw sessionError;
+          if (!sessionData.session && sharedPhotoUserPromise) {
+            await sharedPhotoUserPromise.catch(() => null);
+            ({ data: sessionData, error: sessionError } = await supabaseClient.auth.getSession());
+            if (sessionError) throw sessionError;
+          }
+
+          let result;
+          if (sessionData.session?.user?.is_anonymous) {
+            result = await supabaseClient.auth.updateUser({ email, password });
+          } else {
+            const options = {};
+            const emailRedirectTo = getAuthRedirectUrl();
+            if (emailRedirectTo) options.emailRedirectTo = emailRedirectTo;
+            result = await supabaseClient.auth.signUp({ email, password, options });
+          }
+
+          if (result.error) throw result.error;
+          if (result.data.session && !result.data.user?.is_anonymous) {
+            unlockSite("owner");
+          } else {
+            setAuthMode("login");
+            accessStatus.textContent = "Проверьте почту и подтвердите адрес по ссылке от Supabase. После подтверждения войдите с email и паролем.";
+          }
+        } else {
+          const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          if (!data.session) throw new Error("Supabase не создал сессию входа.");
+          unlockSite("owner");
+        }
+      } catch (error) {
+        console.error("Не удалось выполнить действие с аккаунтом.", error);
+        accessStatus.textContent = getAuthErrorMessage(error);
+      } finally {
+        authSubmitButton.disabled = false;
+      }
+    });
+
+    function authStatusMessage(message) {
+      accessStatus.textContent = message;
+    }
+
+    function getAuthErrorMessage(error) {
+      const message = String(error.message || "");
+      if (/invalid login credentials/i.test(message)) return "Неверная почта или пароль.";
+      if (/user already registered/i.test(message)) return "Этот email уже зарегистрирован. Переключитесь на вход.";
+      if (/password should be at least/i.test(message)) return "Пароль должен содержать не менее 8 символов.";
+      if (/email not confirmed/i.test(message)) return "Сначала подтвердите email по ссылке из письма.";
+      return `Не удалось выполнить действие: ${message}`;
+    }
+
+    authToggleButton.addEventListener("click", () => {
+      setAuthMode(authMode === "register" ? "login" : "register");
+    });
+
+    authGuestButton.addEventListener("click", () => unlockSite("guest"));
+
+    accessLogoutButton.addEventListener("click", async () => {
+      if (!guestMode && supabaseClient) {
+        const { error } = await supabaseClient.auth.signOut();
+        if (error) {
+          console.error("Не удалось завершить сессию Supabase.", error);
+          accessStatus.textContent = `Не удалось выйти: ${error.message}`;
+          return;
+        }
+      }
+
+      siteContent.hidden = true;
+      siteContent.classList.remove("guest-view");
+      guestMode = false;
+      authForm.reset();
+      setAuthMode("register");
+      accessScreen.hidden = false;
+      authEmailInput.focus();
+    });
+
+    initializeAccess();
+
+    if (false) {
     const accessCodeHashes = new Set([
       "eb1c68a22921a81de63e52ef5dd79e42e6cd36ea1b40ae9bb5a595b8f055bfd4",
       "e632f39c680ded7032f20b17df465f7ce19629c94c164f32c007e3b87ab673aa",
@@ -1576,6 +1691,8 @@
       updateNameCooldown();
     });
 
+    }
+
     const videoForm = document.querySelector("#video-form");
     const videoUrlInput = document.querySelector("#video-url");
     const videoStatus = document.querySelector("#video-status");
@@ -1597,15 +1714,6 @@
     const photoStorageKey = "hollywood-gang-postimages-photos";
     const sharedPhotoTable = "photos";
     const sharedPhotoBucket = "hollywood-photos";
-    const supabaseUrl = "https://plelpuyfyvlujrgjcjkw.supabase.co";
-    const supabasePublishableKey = "sb_publishable_UC7sx7ATshXGLZRbx061Vw_3JWCQB0T";
-    const supabaseClient = window.supabase?.createClient(supabaseUrl, supabasePublishableKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: false
-      }
-    }) || null;
     const pastedPhotoDatabaseName = "hollywood-gang-pasted-photos";
     const pastedPhotoStoreName = "photos";
     const pastedPhotoObjectUrls = new Map();
@@ -1620,6 +1728,7 @@
     let pendingPastedPhoto = null;
     let pastedPhotoDatabasePromise = null;
     let sharedPhotoUserId = null;
+    let sharedPhotoUserPromise = null;
     const photoViewer = document.querySelector("#photo-viewer");
     const photoViewerImage = document.querySelector("#photo-viewer-image");
     const photoViewerScale = document.querySelector("#photo-viewer-scale");
@@ -1683,25 +1792,37 @@
     }
 
     async function ensureSharedPhotoUser() {
-      if (!supabaseClient) {
-        throw new Error("Не удалось загрузить клиент Supabase. Проверьте подключение к интернету.");
+      if (sharedPhotoUserId) return sharedPhotoUserId;
+      if (sharedPhotoUserPromise) return sharedPhotoUserPromise;
+
+      sharedPhotoUserPromise = (async () => {
+        if (!supabaseClient) {
+          throw new Error("Не удалось загрузить клиент Supabase. Проверьте подключение к интернету.");
+        }
+
+        let { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
+
+        if (!session) {
+          const result = await supabaseClient.auth.signInAnonymously();
+          if (result.error) throw result.error;
+          session = result.data.session;
+        }
+
+        if (!session?.user?.id) {
+          throw new Error("Supabase не создал пользовательскую сессию. Включите анонимный вход в настройках Auth.");
+        }
+
+        sharedPhotoUserId = session.user.id;
+        return sharedPhotoUserId;
+      })();
+
+      try {
+        return await sharedPhotoUserPromise;
+      } catch (error) {
+        sharedPhotoUserPromise = null;
+        throw error;
       }
-
-      let { data: { session }, error } = await supabaseClient.auth.getSession();
-      if (error) throw error;
-
-      if (!session) {
-        const result = await supabaseClient.auth.signInAnonymously();
-        if (result.error) throw result.error;
-        session = result.data.session;
-      }
-
-      if (!session?.user?.id) {
-        throw new Error("Supabase не создал пользовательскую сессию. Включите анонимный вход в настройках Auth.");
-      }
-
-      sharedPhotoUserId = session.user.id;
-      return session.user.id;
     }
 
     async function loadSharedPhotoRecords() {
@@ -2448,6 +2569,13 @@
     photoUrlInput.addEventListener("input", () => {
       photoUrlInput.removeAttribute("aria-invalid");
       photoStatus.textContent = "";
+    });
+
+    supabaseClient?.auth.onAuthStateChange((_event, session) => {
+      sharedPhotoUserId = session?.user?.id || null;
+      sharedPhotoUserPromise = sharedPhotoUserId
+        ? Promise.resolve(sharedPhotoUserId)
+        : null;
     });
 
     for (const videoId of loadVideoIds()) {
