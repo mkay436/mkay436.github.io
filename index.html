@@ -1598,10 +1598,10 @@
       <p class="account-settings-status" id="account-settings-status" role="status" aria-live="polite"></p>
       <section class="founder-admin-panel" id="founder-admin-panel" aria-labelledby="founder-admin-title" hidden>
         <h3 id="founder-admin-title">Управление администраторами</h3>
-        <p>Управлять ролью администратора можно только для подтверждённого аккаунта.</p>
+        <p>Введите ник подтверждённого аккаунта. Ник должен быть уникальным.</p>
         <form class="founder-admin-form" id="founder-admin-form">
-          <label for="founder-admin-email">Электронная почта пользователя</label>
-          <input id="founder-admin-email" name="email" type="email" autocomplete="off" required>
+          <label for="founder-admin-nickname">Ник пользователя</label>
+          <input id="founder-admin-nickname" name="nickname" type="text" maxlength="32" autocomplete="off" required>
           <button type="submit" id="founder-admin-add">Назначить администратором</button>
         </form>
         <ul class="founder-admin-list" id="founder-admin-list" aria-label="Список администраторов"></ul>
@@ -1660,7 +1660,7 @@
     const accountSettingsStatus = document.querySelector("#account-settings-status");
     const founderAdminPanel = document.querySelector("#founder-admin-panel");
     const founderAdminForm = document.querySelector("#founder-admin-form");
-    const founderAdminEmailInput = document.querySelector("#founder-admin-email");
+    const founderAdminNicknameInput = document.querySelector("#founder-admin-nickname");
     const founderAdminAddButton = document.querySelector("#founder-admin-add");
     const founderAdminList = document.querySelector("#founder-admin-list");
     const founderAdminStatus = document.querySelector("#founder-admin-status");
@@ -1975,8 +1975,8 @@
           data.forEach((admin) => {
             const item = document.createElement("li");
             item.className = "founder-admin-item";
-            const email = document.createElement("span");
-            email.textContent = admin.email;
+            const nickname = document.createElement("span");
+            nickname.textContent = admin.nickname;
             const removeButton = document.createElement("button");
             removeButton.className = "founder-admin-remove";
             removeButton.type = "button";
@@ -1984,8 +1984,8 @@
             removeButton.addEventListener("click", async () => {
               removeButton.disabled = true;
               try {
-                const { error: removeError } = await supabaseClient.rpc("set_site_admin", {
-                  p_email: admin.email,
+                const { error: removeError } = await supabaseClient.rpc("set_site_admin_by_id", {
+                  p_user_id: admin.user_id,
                   p_make_admin: false
                 });
                 if (removeError) throw removeError;
@@ -1996,7 +1996,7 @@
                 } else if (!badgesUpdated) {
                   setFounderAdminStatus("Права сняты, но подписи ролей в комментариях не обновились. Обновите страницу.", true);
                 } else {
-                  setFounderAdminStatus(`Права администратора сняты: ${admin.email}`);
+                  setFounderAdminStatus(`Права администратора сняты: ${admin.nickname}`);
                 }
               } catch (error) {
                 console.error("Не удалось снять права администратора.", error);
@@ -2004,7 +2004,7 @@
                 removeButton.disabled = false;
               }
             });
-            item.append(email, removeButton);
+            item.append(nickname, removeButton);
             founderAdminList.append(item);
           });
         }
@@ -2024,18 +2024,18 @@
         return;
       }
 
-      const email = founderAdminEmailInput.value.trim();
-      if (!email) {
-        setFounderAdminStatus("Укажите почту аккаунта.", true);
-        founderAdminEmailInput.focus();
+      const nickname = founderAdminNicknameInput.value.trim();
+      if (!nickname) {
+        setFounderAdminStatus("Укажите ник пользователя.", true);
+        founderAdminNicknameInput.focus();
         return;
       }
 
       founderAdminAddButton.disabled = true;
       setFounderAdminStatus("Назначаю администратора…");
       try {
-        const { error } = await supabaseClient.rpc("set_site_admin", {
-          p_email: email,
+        const { error } = await supabaseClient.rpc("set_site_admin_by_nickname", {
+          p_nickname: nickname,
           p_make_admin: true
         });
         if (error) throw error;
@@ -2048,7 +2048,7 @@
         } else if (!badgesUpdated) {
           setFounderAdminStatus("Права назначены, но подписи ролей в комментариях не обновились. Обновите страницу.", true);
         } else {
-          setFounderAdminStatus(`Права администратора назначены: ${email}`);
+          setFounderAdminStatus(`Права администратора назначены: ${nickname}`);
         }
       } catch (error) {
         console.error("Не удалось назначить администратора.", error);
