@@ -2940,7 +2940,19 @@
       authorGroup.append(roleBadge);
     }
 
-    function renderMediaComment(comment, list, role) {
+    async function getCommentProfiles(authorIds) {
+      const profilesByUserId = new Map();
+      for (let index = 0; index < authorIds.length; index += 500) {
+        const { data, error } = await supabaseClient.rpc("get_comment_profiles", {
+          p_user_ids: authorIds.slice(index, index + 500)
+        });
+        if (error) throw error;
+        data.forEach((profile) => profilesByUserId.set(profile.user_id, profile));
+      }
+      return profilesByUserId;
+    }
+
+    function renderMediaComment(comment, list, profile = {}) {
       const item = document.createElement("li");
       item.className = "comment-entry";
       item.dataset.authorId = comment.author_id;
@@ -2950,9 +2962,11 @@
       authorGroup.className = "comment-author-group";
       const author = document.createElement("span");
       author.className = "comment-author";
-      author.textContent = getCommentAuthorLabel(comment.author_id);
+      author.textContent = typeof profile.nickname === "string" && profile.nickname.trim()
+        ? profile.nickname.trim()
+        : getCommentAuthorLabel(comment.author_id);
       authorGroup.append(author);
-      updateCommentRoleBadge(authorGroup, role);
+      updateCommentRoleBadge(authorGroup, profile.role);
 
       const timestamp = document.createElement("time");
       timestamp.className = "comment-time";
@@ -2978,16 +2992,16 @@
       if (authorIds.length === 0) return true;
 
       try {
-        const { data, error } = await supabaseClient
-          .from("user_roles")
-          .select("user_id, role")
-          .in("user_id", authorIds);
-        if (error) throw error;
-
-        const rolesByUserId = new Map(data.map((row) => [row.user_id, row.role]));
+        const profilesByUserId = await getCommentProfiles(authorIds);
         entries.forEach((entry) => {
           const authorGroup = entry.querySelector(".comment-author-group");
-          if (authorGroup) updateCommentRoleBadge(authorGroup, rolesByUserId.get(entry.dataset.authorId));
+          if (!authorGroup) return;
+          const profile = profilesByUserId.get(entry.dataset.authorId) || {};
+          const author = authorGroup.querySelector(".comment-author");
+          if (author) {
+            author.textContent = profile.nickname || getCommentAuthorLabel(entry.dataset.authorId);
+          }
+          updateCommentRoleBadge(authorGroup, profile.role);
         });
         return true;
       } catch (error) {
@@ -3017,20 +3031,15 @@
 
         if (error) throw error;
 
-        let rolesByUserId = new Map();
-        let roleLookupFailed = false;
+        let profilesByUserId = new Map();
+        let profileLookupFailed = false;
         const authorIds = [...new Set(data.map((comment) => comment.author_id))];
         if (authorIds.length > 0) {
           try {
-            const { data: roleRows, error: roleError } = await supabaseClient
-              .from("user_roles")
-              .select("user_id, role")
-              .in("user_id", authorIds);
-            if (roleError) throw roleError;
-            rolesByUserId = new Map(roleRows.map((row) => [row.user_id, row.role]));
+            profilesByUserId = await getCommentProfiles(authorIds);
           } catch (error) {
-            console.error("Не удалось загрузить роли авторов комментариев.", error);
-            roleLookupFailed = true;
+            console.error("Не удалось загрузить ники авторов комментариев.", error);
+            profileLookupFailed = true;
           }
         }
 
@@ -3041,10 +3050,14 @@
           empty.textContent = "Пока нет комментариев.";
           list.append(empty);
         } else {
-          data.forEach((comment) => renderMediaComment(comment, list, rolesByUserId.get(comment.author_id)));
+          data.forEach((comment) => renderMediaComment(
+            comment,
+            list,
+            profilesByUserId.get(comment.author_id)
+          ));
         }
-        if (roleLookupFailed) {
-          setCommentStatus(status, "Комментарии загружены, но подписи ролей недоступны. Примените миграцию ролей в Supabase.", true);
+        if (profileLookupFailed) {
+          setCommentStatus(status, "Комментарии загружены, но ники недоступны. Примените миграцию профилей комментариев в Supabase.", true);
         } else {
           setCommentStatus(status, "");
         }
@@ -3169,13 +3182,25 @@
 
           const emptyMessage = list.querySelector(".comment-empty");
           if (emptyMessage) emptyMessage.remove();
-          renderMediaComment(data, list, currentAccountRoles.has("founder")
-            ? "founder"
-            : currentAccountRoles.has("admin")
-              ? "admin"
-              : null);
+          let profile = {
+            nickname: user.user_metadata?.nickname,
+            role: currentAccountRoles.has("founder")
+              ? "founder"
+              : currentAccountRoles.has("admin")
+                ? "admin"
+                : null
+          };
+          try {
+            const profilesByUserId = await getCommentProfiles([user.id]);
+            profile = profilesByUserId.get(user.id) || profile;
+          } catch (profileError) {
+            console.error("Комментарий отправлен, но ник не удалось загрузить.", profileError);
+          }
+          renderMediaComment(data, list, profile);
           input.value = "";
-          setCommentStatus(status, "Комментарий добавлен.");
+          setCommentStatus(status, profile.nickname
+            ? "Комментарий добавлен."
+            : "Комментарий добавлен. Чтобы показывать ник, примените миграцию профилей комментариев в Supabase.");
         } catch (error) {
           console.error("Не удалось отправить комментарий.", error);
           setCommentStatus(status, `Не удалось отправить комментарий: ${error.message}`, true);
