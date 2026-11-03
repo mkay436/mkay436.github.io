@@ -857,6 +857,35 @@
       white-space: pre-wrap;
     }
 
+    .comment-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .comment-delete {
+      padding: 5px 9px;
+      border: 1px solid #f0aaa080;
+      border-radius: 4px;
+      background: transparent;
+      color: #f0aaa0;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .comment-delete:hover {
+      background: #f0aaa014;
+    }
+
+    .comment-delete:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .comment-delete[hidden] {
+      display: none;
+    }
+
     .comment-empty,
     .comment-status {
       color: #aaa5a0;
@@ -1746,6 +1775,7 @@
           .select("role")
           .eq("user_id", user.id);
         if (error) throw error;
+        if (!Array.isArray(data)) throw new Error("Supabase вернул некорректный список ролей.");
 
         currentAccountRoles = new Set(data.map((row) => row.role));
         founderAdminPanel.hidden = !currentAccountRoles.has("founder");
@@ -1933,6 +1963,7 @@
       try {
         const { data, error } = await supabaseClient.rpc("list_site_admins");
         if (error) throw error;
+        if (!Array.isArray(data)) throw new Error("Supabase вернул некорректный список администраторов.");
 
         founderAdminList.replaceChildren();
         if (data.length === 0) {
@@ -2940,6 +2971,75 @@
       authorGroup.append(roleBadge);
     }
 
+    function canDeleteOwnComment(authorId) {
+      return Boolean(
+        !guestMode &&
+        currentAccountUser &&
+        !currentAccountUser.is_anonymous &&
+        currentAccountUser.id === authorId &&
+        (currentAccountRoles.has("founder") || currentAccountRoles.has("admin"))
+      );
+    }
+
+    function updateCommentDeleteButton(item) {
+      const deleteButton = item.querySelector(".comment-delete");
+      if (deleteButton) {
+        deleteButton.hidden = !canDeleteOwnComment(item.dataset.authorId);
+      }
+    }
+
+    async function deleteOwnMediaComment(comment, item, button) {
+      if (!canDeleteOwnComment(comment.author_id)) {
+        const status = item.closest(".media-comments")?.querySelector(".comment-status");
+        if (status) {
+          setCommentStatus(status, "Удалять свои комментарии могут только администраторы и Founder.", true);
+        }
+        return;
+      }
+
+      const widget = item.closest(".media-comments");
+      const list = item.closest(".comment-list");
+      const status = widget?.querySelector(".comment-status");
+      if (!list || !status) {
+        console.error("Не удалось найти список для удаления комментария.");
+        return;
+      }
+
+      button.disabled = true;
+      setCommentStatus(status, "Удаляю комментарий…");
+      try {
+        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError) throw sessionError;
+        const user = sessionData.session?.user;
+        if (!user || user.is_anonymous || user.id !== comment.author_id) {
+          throw new Error("Войдите в аккаунт автора комментария, чтобы удалить его.");
+        }
+
+        const { data, error } = await supabaseClient
+          .from(mediaCommentsTable)
+          .delete()
+          .eq("id", comment.id)
+          .eq("author_id", user.id)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("Комментарий не найден или у аккаунта нет прав на удаление.");
+
+        item.remove();
+        if (list.querySelectorAll(".comment-entry").length === 0) {
+          const empty = document.createElement("li");
+          empty.className = "comment-empty";
+          empty.textContent = "Пока нет комментариев.";
+          list.append(empty);
+        }
+        setCommentStatus(status, "Комментарий удалён.");
+      } catch (error) {
+        console.error("Не удалось удалить комментарий.", error);
+        setCommentStatus(status, `Не удалось удалить комментарий: ${error.message}`, true);
+        button.disabled = false;
+      }
+    }
+
     async function getCommentProfiles(authorIds) {
       const profilesByUserId = new Map();
       for (let index = 0; index < authorIds.length; index += 500) {
@@ -2947,6 +3047,7 @@
           p_user_ids: authorIds.slice(index, index + 500)
         });
         if (error) throw error;
+        if (!Array.isArray(data)) throw new Error("Supabase вернул некорректные профили комментариев.");
         data.forEach((profile) => profilesByUserId.set(profile.user_id, profile));
       }
       return profilesByUserId;
@@ -2981,8 +3082,21 @@
       const body = document.createElement("p");
       body.className = "comment-body";
       body.textContent = comment.body;
+      const actions = document.createElement("div");
+      actions.className = "comment-actions";
+      const deleteButton = document.createElement("button");
+      deleteButton.className = "comment-delete";
+      deleteButton.type = "button";
+      deleteButton.textContent = "Удалить";
+      deleteButton.setAttribute("aria-label", "Удалить свой комментарий");
+      deleteButton.hidden = true;
+      deleteButton.addEventListener("click", () => {
+        void deleteOwnMediaComment(comment, item, deleteButton);
+      });
+      actions.append(deleteButton);
       header.append(authorGroup, timestamp);
-      item.append(header, body);
+      item.append(header, body, actions);
+      updateCommentDeleteButton(item);
       list.append(item);
     }
 
@@ -3002,6 +3116,7 @@
             author.textContent = profile.nickname || getCommentAuthorLabel(entry.dataset.authorId);
           }
           updateCommentRoleBadge(authorGroup, profile.role);
+          updateCommentDeleteButton(entry);
         });
         return true;
       } catch (error) {
