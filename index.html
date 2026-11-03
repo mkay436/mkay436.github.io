@@ -810,6 +810,37 @@
       font-weight: 650;
     }
 
+    .comment-author-group {
+      display: inline-flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+
+    .comment-role {
+      padding: 2px 7px;
+      border: 1px solid #ffffff26;
+      border-radius: 999px;
+      color: #d7d2ca;
+      font-size: 10px;
+      font-weight: 750;
+      letter-spacing: 0.4px;
+      line-height: 1.4;
+      text-transform: uppercase;
+    }
+
+    .comment-role[data-role="founder"] {
+      border-color: #e7bd5d70;
+      background: #e7bd5d1a;
+      color: #f0cf78;
+    }
+
+    .comment-role[data-role="admin"] {
+      border-color: #58d98270;
+      background: #43b96f18;
+      color: #7de39b;
+    }
+
     .comment-time {
       color: #aaa5a0;
       font-size: 12px;
@@ -894,6 +925,114 @@
       border: 1px solid #a95045;
       border-radius: 5px;
       background: transparent;
+      color: #f0aaa0;
+    }
+
+    .founder-admin-panel {
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
+      padding-top: 18px;
+      border-top: 1px solid #ffffff18;
+    }
+
+    .founder-admin-panel[hidden] {
+      display: none;
+    }
+
+    .founder-admin-panel h3 {
+      margin: 0;
+      color: #f0cf78;
+      font-size: 17px;
+    }
+
+    .founder-admin-panel > p {
+      margin: 0;
+      color: #aaa5a0;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .founder-admin-form {
+      display: grid;
+      gap: 10px;
+    }
+
+    .founder-admin-form input {
+      width: 100%;
+      min-width: 0;
+      padding: 11px 12px;
+      border: 1px solid #ffffff24;
+      border-radius: 5px;
+      outline: none;
+      background: #111114;
+      color: #f5f2ed;
+      font: inherit;
+    }
+
+    .founder-admin-form input:focus {
+      border-color: #43b96f;
+      box-shadow: 0 0 0 3px #43b96f26;
+    }
+
+    .founder-admin-form button,
+    .founder-admin-remove {
+      padding: 9px 12px;
+      border: 1px solid #43b96f;
+      border-radius: 5px;
+      background: transparent;
+      color: #7de39b;
+      font: inherit;
+      font-weight: 650;
+      cursor: pointer;
+    }
+
+    .founder-admin-form button:hover {
+      background: #43b96f18;
+    }
+
+    .founder-admin-form button:disabled,
+    .founder-admin-remove:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .founder-admin-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .founder-admin-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px 12px;
+      padding: 9px 10px;
+      border: 1px solid #ffffff18;
+      border-radius: 5px;
+      color: #e6dfd5;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .founder-admin-remove {
+      border-color: #f0aaa080;
+      color: #f0aaa0;
+    }
+
+    .founder-admin-status {
+      min-height: 1.5em;
+      margin: 0;
+      color: #7de39b;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .founder-admin-status[data-error="true"] {
       color: #f0aaa0;
       font: inherit;
       font-size: 13px;
@@ -1428,6 +1567,17 @@
         </div>
       </form>
       <p class="account-settings-status" id="account-settings-status" role="status" aria-live="polite"></p>
+      <section class="founder-admin-panel" id="founder-admin-panel" aria-labelledby="founder-admin-title" hidden>
+        <h3 id="founder-admin-title">Управление администраторами</h3>
+        <p>Управлять ролью администратора можно только для подтверждённого аккаунта.</p>
+        <form class="founder-admin-form" id="founder-admin-form">
+          <label for="founder-admin-email">Электронная почта пользователя</label>
+          <input id="founder-admin-email" name="email" type="email" autocomplete="off" required>
+          <button type="submit" id="founder-admin-add">Назначить администратором</button>
+        </form>
+        <ul class="founder-admin-list" id="founder-admin-list" aria-label="Список администраторов"></ul>
+        <p class="founder-admin-status" id="founder-admin-status" role="status" aria-live="polite"></p>
+      </section>
     </div>
   </section>
   <section class="photo-viewer" id="photo-viewer" role="dialog" aria-modal="true" aria-labelledby="photo-viewer-title" hidden>
@@ -1479,6 +1629,12 @@
     const accountSettingsSaveButton = document.querySelector("#account-settings-save");
     const accountSettingsCancelButton = document.querySelector("#account-settings-cancel");
     const accountSettingsStatus = document.querySelector("#account-settings-status");
+    const founderAdminPanel = document.querySelector("#founder-admin-panel");
+    const founderAdminForm = document.querySelector("#founder-admin-form");
+    const founderAdminEmailInput = document.querySelector("#founder-admin-email");
+    const founderAdminAddButton = document.querySelector("#founder-admin-add");
+    const founderAdminList = document.querySelector("#founder-admin-list");
+    const founderAdminStatus = document.querySelector("#founder-admin-status");
     const accountAvatar = document.querySelector("#account-avatar");
     const accountAvatarImage = document.querySelector("#account-avatar-image");
     const accountAvatarInitials = document.querySelector("#account-avatar-initials");
@@ -1486,6 +1642,7 @@
     let authMode = "register";
     let guestMode = false;
     let currentAccountUser = null;
+    let currentAccountRoles = new Set();
 
     function updateAccountAvatar(user) {
       const isRegisteredUser = Boolean(user && !user.is_anonymous);
@@ -1494,6 +1651,8 @@
       accountNickname.hidden = !isRegisteredUser;
       accountSettingsOpenButton.hidden = !isRegisteredUser;
       if (!isRegisteredUser) {
+        currentAccountRoles = new Set();
+        founderAdminPanel.hidden = true;
         accountAvatarImage.removeAttribute("src");
         accountAvatarImage.hidden = true;
         accountAvatarInitials.hidden = true;
@@ -1559,6 +1718,55 @@
       accountAvatarImage.src = avatarUrl;
     }
 
+    async function refreshCurrentAccountRoles(user) {
+      currentAccountRoles = new Set();
+      founderAdminPanel.hidden = true;
+      if (!supabaseClient || !user || user.is_anonymous) return;
+
+      const isFounderAccount = (user.email || "").toLowerCase() === "bentalon0@gmail.com";
+      let founderClaimFailed = false;
+      if (isFounderAccount) {
+        try {
+          const { data: founderClaimed, error } = await supabaseClient.rpc("claim_site_founder_role");
+          if (error) {
+            console.error("Не удалось проверить роль Founder.", error);
+            founderClaimFailed = true;
+          } else if (!founderClaimed) {
+            founderClaimFailed = true;
+          }
+        } catch (error) {
+          console.error("Не удалось проверить роль Founder.", error);
+          founderClaimFailed = true;
+        }
+      }
+
+      try {
+        const { data, error } = await supabaseClient
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id);
+        if (error) throw error;
+
+        currentAccountRoles = new Set(data.map((row) => row.role));
+        founderAdminPanel.hidden = !currentAccountRoles.has("founder");
+        if (
+          isFounderAccount &&
+          !currentAccountRoles.has("founder") &&
+          founderClaimFailed &&
+          !accountSettingsScreen.hidden
+        ) {
+          accountSettingsStatus.dataset.error = "true";
+          accountSettingsStatus.textContent = "Роль Founder не активирована. Подтвердите email и проверьте, что миграция ролей применена в Supabase.";
+        }
+      } catch (error) {
+        console.error("Не удалось загрузить роли аккаунта.", error);
+        if (isFounderAccount && !accountSettingsScreen.hidden) {
+          accountSettingsStatus.dataset.error = "true";
+          accountSettingsStatus.textContent = "Не удалось загрузить роль Founder. Примените миграцию ролей в Supabase.";
+        }
+      }
+    }
+
     function unlockSite(mode) {
       guestMode = mode === "guest";
       if (guestMode) updateAccountAvatar(null);
@@ -1602,6 +1810,7 @@
 
         if (data.session && !data.session.user.is_anonymous) {
           updateAccountAvatar(data.session.user);
+          await refreshCurrentAccountRoles(data.session.user);
           unlockSite("owner");
         } else {
           if (!data.session && sharedPhotoUserPromise) {
@@ -1664,6 +1873,7 @@
           if (result.error) throw result.error;
           if (result.data.session && !result.data.user?.is_anonymous) {
             updateAccountAvatar(result.data.user);
+            await refreshCurrentAccountRoles(result.data.user);
             unlockSite("owner");
           } else {
             setAuthMode("login");
@@ -1674,6 +1884,7 @@
           if (error) throw error;
           if (!data.session) throw new Error("Supabase не создал сессию входа.");
           updateAccountAvatar(data.session.user);
+          await refreshCurrentAccountRoles(data.session.user);
           unlockSite("owner");
         }
       } catch (error) {
@@ -1710,6 +1921,112 @@
       accountSettingsOpenButton.focus();
     }
 
+    function setFounderAdminStatus(message, isError = false) {
+      founderAdminStatus.textContent = message;
+      founderAdminStatus.dataset.error = isError ? "true" : "false";
+    }
+
+    async function loadSiteAdmins() {
+      if (!currentAccountRoles.has("founder")) return false;
+
+      setFounderAdminStatus("Загружаю список администраторов…");
+      try {
+        const { data, error } = await supabaseClient.rpc("list_site_admins");
+        if (error) throw error;
+
+        founderAdminList.replaceChildren();
+        if (data.length === 0) {
+          const empty = document.createElement("li");
+          empty.className = "founder-admin-item";
+          empty.textContent = "Администраторов пока нет.";
+          founderAdminList.append(empty);
+        } else {
+          data.forEach((admin) => {
+            const item = document.createElement("li");
+            item.className = "founder-admin-item";
+            const email = document.createElement("span");
+            email.textContent = admin.email;
+            const removeButton = document.createElement("button");
+            removeButton.className = "founder-admin-remove";
+            removeButton.type = "button";
+            removeButton.textContent = "Снять права";
+            removeButton.addEventListener("click", async () => {
+              removeButton.disabled = true;
+              try {
+                const { error: removeError } = await supabaseClient.rpc("set_site_admin", {
+                  p_email: admin.email,
+                  p_make_admin: false
+                });
+                if (removeError) throw removeError;
+                const adminsLoaded = await loadSiteAdmins();
+                const badgesUpdated = await refreshDisplayedCommentRoles();
+                if (!adminsLoaded) {
+                  setFounderAdminStatus("Права сняты, но список администраторов не обновился. Обновите окно настроек.", true);
+                } else if (!badgesUpdated) {
+                  setFounderAdminStatus("Права сняты, но подписи ролей в комментариях не обновились. Обновите страницу.", true);
+                } else {
+                  setFounderAdminStatus(`Права администратора сняты: ${admin.email}`);
+                }
+              } catch (error) {
+                console.error("Не удалось снять права администратора.", error);
+                setFounderAdminStatus(`Не удалось снять права: ${error.message}`, true);
+                removeButton.disabled = false;
+              }
+            });
+            item.append(email, removeButton);
+            founderAdminList.append(item);
+          });
+        }
+        setFounderAdminStatus("");
+        return true;
+      } catch (error) {
+        console.error("Не удалось загрузить список администраторов.", error);
+        setFounderAdminStatus(`Не удалось загрузить администраторов: ${error.message}`, true);
+        return false;
+      }
+    }
+
+    founderAdminForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!currentAccountRoles.has("founder")) {
+        setFounderAdminStatus("Назначать администраторов может только Founder.", true);
+        return;
+      }
+
+      const email = founderAdminEmailInput.value.trim();
+      if (!email) {
+        setFounderAdminStatus("Укажите почту аккаунта.", true);
+        founderAdminEmailInput.focus();
+        return;
+      }
+
+      founderAdminAddButton.disabled = true;
+      setFounderAdminStatus("Назначаю администратора…");
+      try {
+        const { error } = await supabaseClient.rpc("set_site_admin", {
+          p_email: email,
+          p_make_admin: true
+        });
+        if (error) throw error;
+
+        founderAdminForm.reset();
+        const adminsLoaded = await loadSiteAdmins();
+        const badgesUpdated = await refreshDisplayedCommentRoles();
+        if (!adminsLoaded) {
+          setFounderAdminStatus("Права назначены, но список администраторов не обновился. Обновите окно настроек.", true);
+        } else if (!badgesUpdated) {
+          setFounderAdminStatus("Права назначены, но подписи ролей в комментариях не обновились. Обновите страницу.", true);
+        } else {
+          setFounderAdminStatus(`Права администратора назначены: ${email}`);
+        }
+      } catch (error) {
+        console.error("Не удалось назначить администратора.", error);
+        setFounderAdminStatus(`Не удалось назначить администратора: ${error.message}`, true);
+      } finally {
+        founderAdminAddButton.disabled = false;
+      }
+    });
+
     accountSettingsOpenButton.addEventListener("click", async () => {
       if (!supabaseClient) {
         accountSettingsStatus.dataset.error = "true";
@@ -1735,6 +2052,10 @@
         accountSettingsStatus.textContent = "";
         accountSettingsStatus.dataset.error = "false";
         accountSettingsScreen.hidden = false;
+        await refreshCurrentAccountRoles(user);
+        if (currentAccountRoles.has("founder")) {
+          await loadSiteAdmins();
+        }
         accountSettingsNicknameInput.focus();
       } catch (error) {
         console.error("Не удалось открыть настройки аккаунта.", error);
@@ -2607,14 +2928,31 @@
       return `Участник #${authorId.slice(0, 6).toUpperCase()}`;
     }
 
-    function renderMediaComment(comment, list) {
+    function updateCommentRoleBadge(authorGroup, role) {
+      authorGroup.querySelector(".comment-role")?.remove();
+      if (role !== "founder" && role !== "admin") return;
+
+      const roleBadge = document.createElement("span");
+      roleBadge.className = "comment-role";
+      roleBadge.dataset.role = role;
+      roleBadge.textContent = role === "founder" ? "Founder" : "Admin";
+      roleBadge.setAttribute("aria-label", role === "founder" ? "Основатель сайта" : "Администратор сайта");
+      authorGroup.append(roleBadge);
+    }
+
+    function renderMediaComment(comment, list, role) {
       const item = document.createElement("li");
       item.className = "comment-entry";
+      item.dataset.authorId = comment.author_id;
 
       const header = document.createElement("header");
+      const authorGroup = document.createElement("span");
+      authorGroup.className = "comment-author-group";
       const author = document.createElement("span");
       author.className = "comment-author";
       author.textContent = getCommentAuthorLabel(comment.author_id);
+      authorGroup.append(author);
+      updateCommentRoleBadge(authorGroup, role);
 
       const timestamp = document.createElement("time");
       timestamp.className = "comment-time";
@@ -2629,9 +2967,33 @@
       const body = document.createElement("p");
       body.className = "comment-body";
       body.textContent = comment.body;
-      header.append(author, timestamp);
+      header.append(authorGroup, timestamp);
       item.append(header, body);
       list.append(item);
+    }
+
+    async function refreshDisplayedCommentRoles() {
+      const entries = [...document.querySelectorAll(".comment-entry[data-author-id]")];
+      const authorIds = [...new Set(entries.map((entry) => entry.dataset.authorId))];
+      if (authorIds.length === 0) return true;
+
+      try {
+        const { data, error } = await supabaseClient
+          .from("user_roles")
+          .select("user_id, role")
+          .in("user_id", authorIds);
+        if (error) throw error;
+
+        const rolesByUserId = new Map(data.map((row) => [row.user_id, row.role]));
+        entries.forEach((entry) => {
+          const authorGroup = entry.querySelector(".comment-author-group");
+          if (authorGroup) updateCommentRoleBadge(authorGroup, rolesByUserId.get(entry.dataset.authorId));
+        });
+        return true;
+      } catch (error) {
+        console.error("Не удалось обновить подписи ролей в комментариях.", error);
+        return false;
+      }
     }
 
     function setCommentStatus(status, message, isError = false) {
@@ -2655,6 +3017,23 @@
 
         if (error) throw error;
 
+        let rolesByUserId = new Map();
+        let roleLookupFailed = false;
+        const authorIds = [...new Set(data.map((comment) => comment.author_id))];
+        if (authorIds.length > 0) {
+          try {
+            const { data: roleRows, error: roleError } = await supabaseClient
+              .from("user_roles")
+              .select("user_id, role")
+              .in("user_id", authorIds);
+            if (roleError) throw roleError;
+            rolesByUserId = new Map(roleRows.map((row) => [row.user_id, row.role]));
+          } catch (error) {
+            console.error("Не удалось загрузить роли авторов комментариев.", error);
+            roleLookupFailed = true;
+          }
+        }
+
         list.replaceChildren();
         if (data.length === 0) {
           const empty = document.createElement("li");
@@ -2662,9 +3041,13 @@
           empty.textContent = "Пока нет комментариев.";
           list.append(empty);
         } else {
-          data.forEach((comment) => renderMediaComment(comment, list));
+          data.forEach((comment) => renderMediaComment(comment, list, rolesByUserId.get(comment.author_id)));
         }
-        setCommentStatus(status, "");
+        if (roleLookupFailed) {
+          setCommentStatus(status, "Комментарии загружены, но подписи ролей недоступны. Примените миграцию ролей в Supabase.", true);
+        } else {
+          setCommentStatus(status, "");
+        }
       } catch (error) {
         console.error("Не удалось загрузить комментарии.", error);
         setCommentStatus(
@@ -2786,7 +3169,11 @@
 
           const emptyMessage = list.querySelector(".comment-empty");
           if (emptyMessage) emptyMessage.remove();
-          renderMediaComment(data, list);
+          renderMediaComment(data, list, currentAccountRoles.has("founder")
+            ? "founder"
+            : currentAccountRoles.has("admin")
+              ? "admin"
+              : null);
           input.value = "";
           setCommentStatus(status, "Комментарий добавлен.");
         } catch (error) {
@@ -3319,7 +3706,10 @@
       sharedPhotoUserPromise = sharedPhotoUserId
         ? Promise.resolve(sharedPhotoUserId)
         : null;
-      if (!guestMode) updateAccountAvatar(session?.user || null);
+      if (!guestMode) {
+        updateAccountAvatar(session?.user || null);
+        void refreshCurrentAccountRoles(session?.user || null);
+      }
       void refreshCommentForms(session);
     });
 
