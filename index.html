@@ -102,9 +102,19 @@
     }
 
     #auth-email,
-    #auth-password {
+    #auth-password,
+    #auth-nickname {
       letter-spacing: normal;
       text-transform: none;
+    }
+
+    #auth-nickname-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    #auth-nickname-field[hidden] {
+      display: none;
     }
 
     .access-form input:disabled {
@@ -374,8 +384,51 @@
 
     .site-toolbar {
       display: flex;
+      align-items: center;
       justify-content: flex-end;
+      gap: 12px;
       margin-bottom: 16px;
+    }
+
+    .account-avatar {
+      display: grid;
+      width: 40px;
+      height: 40px;
+      overflow: hidden;
+      place-items: center;
+      border: 1px solid #43b96f80;
+      border-radius: 50%;
+      background: #43b96f;
+      color: #101712;
+      font-size: 15px;
+      font-weight: 750;
+      line-height: 1;
+    }
+
+    .account-avatar[hidden],
+    .account-avatar img[hidden],
+    .account-avatar span[hidden] {
+      display: none;
+    }
+
+    .account-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .account-nickname {
+      max-width: min(26vw, 240px);
+      overflow: hidden;
+      color: #f5f2ed;
+      font-size: 14px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .account-nickname[hidden] {
+      display: none;
     }
 
     .access-logout {
@@ -392,6 +445,107 @@
     .access-logout:hover {
       background: #43b96f;
       color: #101712;
+    }
+
+    .account-settings-screen[hidden] {
+      display: none;
+    }
+
+    .account-settings-screen {
+      position: fixed;
+      z-index: 15;
+      inset: 0;
+      display: grid;
+      overflow-y: auto;
+      padding: 24px;
+      place-items: center;
+      background: #111114ed;
+      backdrop-filter: blur(8px);
+    }
+
+    .account-settings-card {
+      width: min(100%, 420px);
+      padding: clamp(24px, 5vw, 36px);
+      border: 1px solid #43b96f40;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #202420, #171c18);
+      box-shadow: 0 18px 60px #0008;
+      margin: auto;
+    }
+
+    .account-settings-card h2 {
+      margin: 0 0 20px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(24px, 5vw, 30px);
+    }
+
+    .account-settings-form {
+      display: grid;
+      gap: 12px;
+    }
+
+    .account-settings-form label {
+      color: #e6dfd5;
+      font-size: 14px;
+    }
+
+    .account-settings-form input {
+      width: 100%;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 1px solid #ffffff24;
+      border-radius: 5px;
+      outline: none;
+      background: #111114;
+      color: #f5f2ed;
+      font: inherit;
+    }
+
+    .account-settings-form input:focus {
+      border-color: #43b96f;
+      box-shadow: 0 0 0 3px #43b96f26;
+    }
+
+    .account-settings-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .account-settings-actions button {
+      flex: 1 1 auto;
+      padding: 11px 16px;
+      border: 1px solid #43b96f;
+      border-radius: 5px;
+      background: #43b96f;
+      color: #101712;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .account-settings-actions .account-settings-cancel {
+      border-color: #ffffff30;
+      background: transparent;
+      color: #e6dfd5;
+    }
+
+    .account-settings-actions button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+    }
+
+    .account-settings-status {
+      min-height: 1.5em;
+      margin: 12px 0 0;
+      color: #7de39b;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .account-settings-status[data-error="true"] {
+      color: #f0aaa0;
     }
 
     .guest-view .video-form,
@@ -1133,6 +1287,18 @@
     <div class="access-card">
       <h1 id="access-title">Регистрация</h1>
       <form class="access-form" id="auth-form">
+        <div id="auth-nickname-field">
+          <label for="auth-nickname">Ник</label>
+          <input
+            id="auth-nickname"
+            name="nickname"
+            type="text"
+            autocomplete="nickname"
+            maxlength="32"
+            aria-describedby="access-status"
+            required
+          >
+        </div>
         <label for="auth-email">Электронная почта</label>
         <input
           id="auth-email"
@@ -1162,6 +1328,12 @@
   </section>
   <main hidden>
     <div class="site-toolbar">
+      <div class="account-avatar" id="account-avatar" role="img" aria-label="Аватар пользователя" hidden>
+        <img id="account-avatar-image" alt="" hidden>
+        <span id="account-avatar-initials" hidden></span>
+      </div>
+      <span class="account-nickname" id="account-nickname" hidden></span>
+      <button class="access-logout" id="account-settings-open" type="button" hidden>Настройки</button>
       <button class="access-logout" id="access-logout" type="button">Выйти</button>
     </div>
     <nav class="breadcrumbs" aria-label="Навигационная цепочка">
@@ -1242,6 +1414,22 @@
       <div class="photo-list" id="photo-list" aria-label="Добавленные фотографии"></div>
     </section>
   </main>
+  <section class="account-settings-screen" id="account-settings-screen" role="dialog" aria-modal="true" aria-labelledby="account-settings-title" hidden>
+    <div class="account-settings-card">
+      <h2 id="account-settings-title">Настройки аккаунта</h2>
+      <form class="account-settings-form" id="account-settings-form">
+        <label for="account-settings-nickname">Ник</label>
+        <input id="account-settings-nickname" name="nickname" type="text" autocomplete="nickname" maxlength="32" required>
+        <label for="account-settings-email">Электронная почта</label>
+        <input id="account-settings-email" name="email" type="email" autocomplete="email" required>
+        <div class="account-settings-actions">
+          <button type="submit" id="account-settings-save">Сохранить</button>
+          <button class="account-settings-cancel" id="account-settings-cancel" type="button">Закрыть</button>
+        </div>
+      </form>
+      <p class="account-settings-status" id="account-settings-status" role="status" aria-live="polite"></p>
+    </div>
+  </section>
   <section class="photo-viewer" id="photo-viewer" role="dialog" aria-modal="true" aria-labelledby="photo-viewer-title" hidden>
     <div class="photo-viewer-toolbar">
       <h2 id="photo-viewer-title" class="visually-hidden">Просмотр фотографии</h2>
@@ -1272,6 +1460,8 @@
 
     const accessScreen = document.querySelector("#access-screen");
     const authForm = document.querySelector("#auth-form");
+    const authNicknameField = document.querySelector("#auth-nickname-field");
+    const authNicknameInput = document.querySelector("#auth-nickname");
     const authEmailInput = document.querySelector("#auth-email");
     const authPasswordInput = document.querySelector("#auth-password");
     const authSubmitButton = document.querySelector("#auth-submit");
@@ -1281,11 +1471,97 @@
     const accessTitle = document.querySelector("#access-title");
     const siteContent = document.querySelector("main");
     const accessLogoutButton = document.querySelector("#access-logout");
+    const accountSettingsOpenButton = document.querySelector("#account-settings-open");
+    const accountSettingsScreen = document.querySelector("#account-settings-screen");
+    const accountSettingsForm = document.querySelector("#account-settings-form");
+    const accountSettingsNicknameInput = document.querySelector("#account-settings-nickname");
+    const accountSettingsEmailInput = document.querySelector("#account-settings-email");
+    const accountSettingsSaveButton = document.querySelector("#account-settings-save");
+    const accountSettingsCancelButton = document.querySelector("#account-settings-cancel");
+    const accountSettingsStatus = document.querySelector("#account-settings-status");
+    const accountAvatar = document.querySelector("#account-avatar");
+    const accountAvatarImage = document.querySelector("#account-avatar-image");
+    const accountAvatarInitials = document.querySelector("#account-avatar-initials");
+    const accountNickname = document.querySelector("#account-nickname");
     let authMode = "register";
     let guestMode = false;
+    let currentAccountUser = null;
+
+    function updateAccountAvatar(user) {
+      const isRegisteredUser = Boolean(user && !user.is_anonymous);
+      currentAccountUser = isRegisteredUser ? user : null;
+      accountAvatar.hidden = !isRegisteredUser;
+      accountNickname.hidden = !isRegisteredUser;
+      accountSettingsOpenButton.hidden = !isRegisteredUser;
+      if (!isRegisteredUser) {
+        accountAvatarImage.removeAttribute("src");
+        accountAvatarImage.hidden = true;
+        accountAvatarInitials.hidden = true;
+        accountNickname.textContent = "";
+        return;
+      }
+
+      const metadata = user.user_metadata || {};
+      const displayName = [
+        metadata.nickname,
+        metadata.full_name,
+        metadata.name,
+        user.email
+      ].find((value) => typeof value === "string" && value.trim())?.trim() || "Пользователь";
+      accountNickname.textContent = displayName;
+      const initials = displayName
+        .trim()
+        .split(/[\s._-]+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => Array.from(part)[0].toLocaleUpperCase("ru-RU"))
+        .join("") || "?";
+      const avatarValue = metadata.avatar_url || metadata.picture || metadata.avatar;
+      let avatarUrl = null;
+
+      if (typeof avatarValue === "string" && avatarValue.trim()) {
+        try {
+          const parsedUrl = new URL(avatarValue, window.location.href);
+          if (
+            (parsedUrl.protocol === "https:" || parsedUrl.protocol === "http:") &&
+            !parsedUrl.username &&
+            !parsedUrl.password
+          ) {
+            avatarUrl = parsedUrl.href;
+          }
+        } catch (error) {
+          console.warn("Не удалось прочитать ссылку на аватар пользователя.", error);
+        }
+      }
+
+      accountAvatar.setAttribute("aria-label", `Аватар: ${displayName}`);
+      if (!avatarUrl) {
+        accountAvatarImage.removeAttribute("src");
+        accountAvatarImage.hidden = true;
+        accountAvatarInitials.textContent = initials;
+        accountAvatarInitials.hidden = false;
+        return;
+      }
+
+      accountAvatarImage.referrerPolicy = "no-referrer";
+      accountAvatarImage.onload = () => {
+        accountAvatarInitials.hidden = true;
+        accountAvatarImage.hidden = false;
+      };
+      accountAvatarImage.onerror = () => {
+        accountAvatarImage.removeAttribute("src");
+        accountAvatarImage.hidden = true;
+        accountAvatarInitials.textContent = initials;
+        accountAvatarInitials.hidden = false;
+      };
+      accountAvatarInitials.textContent = initials;
+      accountAvatarInitials.hidden = false;
+      accountAvatarImage.src = avatarUrl;
+    }
 
     function unlockSite(mode) {
       guestMode = mode === "guest";
+      if (guestMode) updateAccountAvatar(null);
       siteContent.classList.toggle("guest-view", guestMode);
       accessScreen.hidden = true;
       siteContent.hidden = false;
@@ -1300,6 +1576,8 @@
       authToggleButton.textContent = registering
         ? "Уже есть аккаунт? Войти"
         : "Нет аккаунта? Зарегистрироваться";
+      authNicknameField.hidden = !registering;
+      authNicknameInput.required = registering;
       authPasswordInput.autocomplete = registering ? "new-password" : "current-password";
       accessStatus.textContent = "";
       authPasswordInput.value = "";
@@ -1323,6 +1601,7 @@
         if (error) throw error;
 
         if (data.session && !data.session.user.is_anonymous) {
+          updateAccountAvatar(data.session.user);
           unlockSite("owner");
         } else {
           if (!data.session && sharedPhotoUserPromise) {
@@ -1347,6 +1626,13 @@
 
       const email = authEmailInput.value.trim();
       const password = authPasswordInput.value;
+      const nickname = authNicknameInput.value.trim();
+      if (authMode === "register" && !nickname) {
+        accessStatus.textContent = "Укажите ник.";
+        authNicknameInput.focus();
+        return;
+      }
+
       authSubmitButton.disabled = true;
       authStatusMessage("Связываюсь с Supabase…");
 
@@ -1362,16 +1648,22 @@
 
           let result;
           if (sessionData.session?.user?.is_anonymous) {
-            result = await supabaseClient.auth.updateUser({ email, password });
+            result = await supabaseClient.auth.updateUser({
+              email,
+              password,
+              data: { nickname }
+            });
           } else {
             const options = {};
             const emailRedirectTo = getAuthRedirectUrl();
             if (emailRedirectTo) options.emailRedirectTo = emailRedirectTo;
+            options.data = { nickname };
             result = await supabaseClient.auth.signUp({ email, password, options });
           }
 
           if (result.error) throw result.error;
           if (result.data.session && !result.data.user?.is_anonymous) {
+            updateAccountAvatar(result.data.user);
             unlockSite("owner");
           } else {
             setAuthMode("login");
@@ -1381,6 +1673,7 @@
           const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
           if (error) throw error;
           if (!data.session) throw new Error("Supabase не создал сессию входа.");
+          updateAccountAvatar(data.session.user);
           unlockSite("owner");
         }
       } catch (error) {
@@ -1409,6 +1702,117 @@
     });
 
     authGuestButton.addEventListener("click", () => unlockSite("guest"));
+
+    function closeAccountSettings() {
+      accountSettingsScreen.hidden = true;
+      accountSettingsStatus.textContent = "";
+      accountSettingsStatus.dataset.error = "false";
+      accountSettingsOpenButton.focus();
+    }
+
+    accountSettingsOpenButton.addEventListener("click", async () => {
+      if (!supabaseClient) {
+        accountSettingsStatus.dataset.error = "true";
+        accountSettingsStatus.textContent = "Не удалось подключиться к сервису аккаунтов.";
+        accountSettingsScreen.hidden = false;
+        return;
+      }
+
+      accountSettingsOpenButton.disabled = true;
+      try {
+        const { data, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
+        const user = data.session?.user;
+        if (!user || user.is_anonymous) {
+          throw new Error("Войдите в зарегистрированный аккаунт, чтобы изменить настройки.");
+        }
+
+        updateAccountAvatar(user);
+        const metadata = user.user_metadata || {};
+        accountSettingsNicknameInput.value =
+          metadata.nickname || metadata.full_name || metadata.name || user.email?.split("@")[0] || "";
+        accountSettingsEmailInput.value = user.email || "";
+        accountSettingsStatus.textContent = "";
+        accountSettingsStatus.dataset.error = "false";
+        accountSettingsScreen.hidden = false;
+        accountSettingsNicknameInput.focus();
+      } catch (error) {
+        console.error("Не удалось открыть настройки аккаунта.", error);
+        accountSettingsStatus.dataset.error = "true";
+        accountSettingsStatus.textContent = `Не удалось загрузить настройки: ${error.message}`;
+        accountSettingsScreen.hidden = false;
+      } finally {
+        accountSettingsOpenButton.disabled = false;
+      }
+    });
+
+    accountSettingsCancelButton.addEventListener("click", closeAccountSettings);
+    accountSettingsScreen.addEventListener("click", (event) => {
+      if (event.target === accountSettingsScreen) closeAccountSettings();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !accountSettingsScreen.hidden) {
+        closeAccountSettings();
+      }
+    });
+
+    accountSettingsForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      if (!supabaseClient) {
+        accountSettingsStatus.dataset.error = "true";
+        accountSettingsStatus.textContent = "Не удалось подключиться к сервису аккаунтов.";
+        return;
+      }
+
+      const email = accountSettingsEmailInput.value.trim();
+      const nickname = accountSettingsNicknameInput.value.trim();
+      if (!nickname) {
+        accountSettingsStatus.dataset.error = "true";
+        accountSettingsStatus.textContent = "Укажите ник.";
+        accountSettingsNicknameInput.focus();
+        return;
+      }
+      if (!email) {
+        accountSettingsStatus.dataset.error = "true";
+        accountSettingsStatus.textContent = "Укажите электронную почту.";
+        accountSettingsEmailInput.focus();
+        return;
+      }
+
+      accountSettingsSaveButton.disabled = true;
+      accountSettingsCancelButton.disabled = true;
+      accountSettingsStatus.dataset.error = "false";
+      accountSettingsStatus.textContent = "Сохраняю изменения…";
+      try {
+        const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+        if (sessionError) throw sessionError;
+        const user = sessionData.session?.user;
+        if (!user || user.is_anonymous) {
+          throw new Error("Сессия аккаунта не найдена. Войдите снова.");
+        }
+
+        const emailChanged = email.toLowerCase() !== (user.email || "").toLowerCase();
+        const updates = { data: { ...user.user_metadata, nickname } };
+        if (emailChanged) updates.email = email;
+        const { data, error } = await supabaseClient.auth.updateUser(updates);
+        if (error) throw error;
+        if (!data.user) throw new Error("Сервис не вернул обновленный профиль.");
+
+        updateAccountAvatar(data.user);
+        if (emailChanged) {
+          accountSettingsStatus.textContent = "Ник изменен. Чтобы сменить почту, подтвердите новый адрес по ссылке из письма.";
+        } else {
+          accountSettingsStatus.textContent = "Настройки аккаунта сохранены.";
+        }
+      } catch (error) {
+        console.error("Не удалось сохранить настройки аккаунта.", error);
+        accountSettingsStatus.dataset.error = "true";
+        accountSettingsStatus.textContent = `Не удалось сохранить изменения: ${error.message}`;
+      } finally {
+        accountSettingsSaveButton.disabled = false;
+        accountSettingsCancelButton.disabled = false;
+      }
+    });
 
     accessLogoutButton.addEventListener("click", async () => {
       if (!guestMode && supabaseClient) {
@@ -2915,6 +3319,7 @@
       sharedPhotoUserPromise = sharedPhotoUserId
         ? Promise.resolve(sharedPhotoUserId)
         : null;
+      if (!guestMode) updateAccountAvatar(session?.user || null);
       void refreshCommentForms(session);
     });
 
