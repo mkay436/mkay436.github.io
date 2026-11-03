@@ -612,6 +612,128 @@
       font-size: 14px;
     }
 
+    .media-comments {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-top: 1px solid #ffffff12;
+    }
+
+    .media-comments h3 {
+      margin: 0;
+      color: #e6dfd5;
+      font-size: 15px;
+    }
+
+    .comment-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .comment-entry {
+      display: grid;
+      gap: 5px;
+      padding: 10px 12px;
+      border: 1px solid #ffffff12;
+      border-radius: 6px;
+      background: #111411;
+    }
+
+    .comment-entry header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px 12px;
+    }
+
+    .comment-author {
+      color: #7de39b;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .comment-time {
+      color: #aaa5a0;
+      font-size: 12px;
+    }
+
+    .comment-body,
+    .comment-empty,
+    .comment-status {
+      margin: 0;
+      color: #d7d2ca;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .comment-empty,
+    .comment-status {
+      color: #aaa5a0;
+    }
+
+    .comment-form {
+      display: grid;
+      gap: 8px;
+    }
+
+    .comment-form[hidden] {
+      display: none;
+    }
+
+    .comment-form textarea {
+      width: 100%;
+      min-height: 66px;
+      resize: vertical;
+      padding: 10px 12px;
+      border: 1px solid #ffffff24;
+      border-radius: 5px;
+      outline: none;
+      background: #111114;
+      color: #f5f2ed;
+      font: inherit;
+      font-size: 13px;
+    }
+
+    .comment-form textarea:focus {
+      border-color: #43b96f;
+      box-shadow: 0 0 0 3px #43b96f26;
+    }
+
+    .comment-form button {
+      justify-self: end;
+      padding: 8px 12px;
+      border: 1px solid #43b96f;
+      border-radius: 5px;
+      background: #43b96f;
+      color: #101712;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .comment-form button:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+
+    .comment-login-note {
+      margin: 0;
+      color: #aaa5a0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .comment-login-note[hidden] {
+      display: none;
+    }
+
     .video-delete {
       flex: 0 0 auto;
       padding: 7px 10px;
@@ -1138,6 +1260,8 @@
   <script>
     const supabaseUrl = "https://plelpuyfyvlujrgjcjkw.supabase.co";
     const supabasePublishableKey = "sb_publishable_UC7sx7ATshXGLZRbx061Vw_3JWCQB0T";
+    const mediaCommentsTable = "media_comments";
+    const mediaCommentMaxLength = 1000;
     const supabaseClient = window.supabase?.createClient(supabaseUrl, supabasePublishableKey, {
       auth: {
         autoRefreshToken: true,
@@ -1165,6 +1289,7 @@
       siteContent.classList.toggle("guest-view", guestMode);
       accessScreen.hidden = true;
       siteContent.hidden = false;
+      refreshCommentForms();
     }
 
     function setAuthMode(mode) {
@@ -2074,6 +2199,205 @@
       return videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId) ? videoId : null;
     }
 
+    function getCommentAuthorLabel(authorId) {
+      return `Участник #${authorId.slice(0, 6).toUpperCase()}`;
+    }
+
+    function renderMediaComment(comment, list) {
+      const item = document.createElement("li");
+      item.className = "comment-entry";
+
+      const header = document.createElement("header");
+      const author = document.createElement("span");
+      author.className = "comment-author";
+      author.textContent = getCommentAuthorLabel(comment.author_id);
+
+      const timestamp = document.createElement("time");
+      timestamp.className = "comment-time";
+      const createdAt = new Date(comment.created_at);
+      if (Number.isFinite(createdAt.getTime())) {
+        timestamp.dateTime = createdAt.toISOString();
+        timestamp.textContent = createdAt.toLocaleString("ru-RU");
+      } else {
+        timestamp.textContent = "Дата неизвестна";
+      }
+
+      const body = document.createElement("p");
+      body.className = "comment-body";
+      body.textContent = comment.body;
+      header.append(author, timestamp);
+      item.append(header, body);
+      list.append(item);
+    }
+
+    function setCommentStatus(status, message, isError = false) {
+      status.textContent = message;
+      status.dataset.error = isError ? "true" : "false";
+    }
+
+    async function loadMediaComments(mediaType, mediaId, list, status) {
+      if (!supabaseClient) {
+        setCommentStatus(status, "Комментарии недоступны: не удалось подключиться к Supabase.", true);
+        return;
+      }
+
+      try {
+        const { data, error } = await supabaseClient
+          .from(mediaCommentsTable)
+          .select("id, author_id, body, created_at")
+          .eq("media_type", mediaType)
+          .eq("media_id", mediaId)
+          .order("created_at", { ascending: true });
+
+        if (error) throw error;
+
+        list.replaceChildren();
+        if (data.length === 0) {
+          const empty = document.createElement("li");
+          empty.className = "comment-empty";
+          empty.textContent = "Пока нет комментариев.";
+          list.append(empty);
+        } else {
+          data.forEach((comment) => renderMediaComment(comment, list));
+        }
+        setCommentStatus(status, "");
+      } catch (error) {
+        console.error("Не удалось загрузить комментарии.", error);
+        setCommentStatus(
+          status,
+          "Не удалось загрузить комментарии. Проверьте, что миграция комментариев применена в Supabase.",
+          true
+        );
+      }
+    }
+
+    async function refreshCommentForms(currentSession) {
+      const widgets = [...siteContent.querySelectorAll(".media-comments")]
+        .filter((widget) => widget.querySelector(".comment-form") && widget.querySelector(".comment-login-note"));
+      if (widgets.length === 0) return;
+
+      let canComment = false;
+      if (!guestMode && supabaseClient) {
+        if (currentSession !== undefined) {
+          canComment = Boolean(currentSession?.user && !currentSession.user.is_anonymous);
+        } else {
+          try {
+            const { data, error } = await supabaseClient.auth.getSession();
+            if (error) throw error;
+            canComment = Boolean(data.session?.user && !data.session.user.is_anonymous);
+          } catch (error) {
+            console.error("Не удалось проверить доступ к комментариям.", error);
+          }
+        }
+      }
+
+      widgets.forEach((widget) => {
+        const form = widget.querySelector(".comment-form");
+        const note = widget.querySelector(".comment-login-note");
+        form.hidden = !canComment;
+        note.hidden = canComment;
+        note.textContent = guestMode
+          ? "Войдите в аккаунт, чтобы оставить комментарий."
+          : "Комментарии могут оставлять только зарегистрированные пользователи.";
+      });
+    }
+
+    function createMediaComments(mediaType, mediaId) {
+      const section = document.createElement("section");
+      section.className = "media-comments";
+      section.setAttribute("aria-label", "Комментарии");
+      section.dataset.mediaType = mediaType;
+      section.dataset.mediaId = mediaId;
+
+      const heading = document.createElement("h3");
+      heading.textContent = "Комментарии";
+
+      const list = document.createElement("ul");
+      list.className = "comment-list";
+      list.setAttribute("aria-live", "polite");
+
+      const status = document.createElement("p");
+      status.className = "comment-status";
+      status.setAttribute("role", "status");
+      status.setAttribute("aria-live", "polite");
+
+      const form = document.createElement("form");
+      form.className = "comment-form";
+      form.hidden = true;
+
+      const input = document.createElement("textarea");
+      input.maxLength = mediaCommentMaxLength;
+      input.required = true;
+      input.placeholder = "Напишите комментарий…";
+      input.setAttribute("aria-label", "Текст комментария");
+
+      const submit = document.createElement("button");
+      submit.type = "submit";
+      submit.textContent = "Отправить";
+      form.append(input, submit);
+
+      const loginNote = document.createElement("p");
+      loginNote.className = "comment-login-note";
+      loginNote.textContent = "Комментарии могут оставлять только зарегистрированные пользователи.";
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const body = input.value.trim();
+        if (!body) {
+          setCommentStatus(status, "Введите текст комментария.", true);
+          input.focus();
+          return;
+        }
+        if (body.length > mediaCommentMaxLength) {
+          setCommentStatus(status, `Комментарий не должен быть длиннее ${mediaCommentMaxLength} символов.`, true);
+          return;
+        }
+        if (!supabaseClient || guestMode) {
+          setCommentStatus(status, "Войдите в зарегистрированный аккаунт, чтобы комментировать.", true);
+          return;
+        }
+
+        submit.disabled = true;
+        setCommentStatus(status, "Отправляю комментарий…");
+        try {
+          const { data: sessionData, error: sessionError } = await supabaseClient.auth.getSession();
+          if (sessionError) throw sessionError;
+          const user = sessionData.session?.user;
+          if (!user || user.is_anonymous) {
+            throw new Error("Сначала войдите в зарегистрированный аккаунт.");
+          }
+
+          const { data, error } = await supabaseClient
+            .from(mediaCommentsTable)
+            .insert({
+              media_type: mediaType,
+              media_id: mediaId,
+              author_id: user.id,
+              body
+            })
+            .select("id, author_id, body, created_at")
+            .single();
+
+          if (error) throw error;
+
+          const emptyMessage = list.querySelector(".comment-empty");
+          if (emptyMessage) emptyMessage.remove();
+          renderMediaComment(data, list);
+          input.value = "";
+          setCommentStatus(status, "Комментарий добавлен.");
+        } catch (error) {
+          console.error("Не удалось отправить комментарий.", error);
+          setCommentStatus(status, `Не удалось отправить комментарий: ${error.message}`, true);
+        } finally {
+          submit.disabled = false;
+        }
+      });
+
+      section.append(heading, list, status, form, loginNote);
+      void loadMediaComments(mediaType, mediaId, list, status);
+      return section;
+    }
+
     function createVideoCard(videoId) {
       const card = document.createElement("article");
       card.className = "video-card";
@@ -2111,7 +2435,8 @@
 
       frameContainer.append(frame);
       footer.append(caption, deleteButton);
-      card.append(frameContainer, footer);
+      card.append(frameContainer, footer, createMediaComments("video", videoId));
+      void refreshCommentForms();
       return card;
     }
 
@@ -2205,6 +2530,20 @@
         footer.append(deleteButton);
       }
       card.append(previewButton, footer);
+      if (photoRecord?.id) {
+        card.append(createMediaComments("photo", photoRecord.id));
+        void refreshCommentForms();
+      } else {
+        const comments = document.createElement("section");
+        comments.className = "media-comments";
+        const heading = document.createElement("h3");
+        heading.textContent = "Комментарии";
+        const message = document.createElement("p");
+        message.className = "comment-status";
+        message.textContent = "Комментарии доступны после добавления фотографии в общее хранилище.";
+        comments.append(heading, message);
+        card.append(comments);
+      }
       return card;
     }
 
@@ -2576,6 +2915,7 @@
       sharedPhotoUserPromise = sharedPhotoUserId
         ? Promise.resolve(sharedPhotoUserId)
         : null;
+      void refreshCommentForms(session);
     });
 
     for (const videoId of loadVideoIds()) {
